@@ -16,19 +16,27 @@ import * as cookieParser from 'cookie-parser';
 import csurf from 'csurf';
 import { ValidationPipe } from '@nestjs/common';
 import { useContainer } from 'class-validator';
+import { LoggerConfigService } from './common/logging/logger.config';
 
 async function bootstrap(): Promise<void> {
-  const logger = new Logger('Bootstrap');
-  
-  try {
-    console.log('--- INICIANDO LEVANTAMIENTO DEL SERVIDOR ---');
-  // Configuration service
+  // Create app instance to get config service
+  const app = await NestFactory.create(AppModule, { logger: false });
   const configService = app.get(ConfigService);
 
-  // Queue service (lifecycle hooks handle shutdown automatically)
-  const queueService = app.get(QueueService);
-    const app = await NestFactory.create(AppModule);
+  // Initialize centralized logger
+  const loggerConfigService = new LoggerConfigService(configService);
+  const logger = loggerConfigService.child('Bootstrap');
+
+  try {
+    logger.log('--- INICIANDO LEVANTAMIENTO DEL SERVIDOR ---');
+    // Recreate app with proper logger configuration
+    const app = await NestFactory.create(AppModule, {
+      logger: loggerConfigService,
+    });
+
+    // Get services
     const appConfigService = app.get(ConfigService);
+    const queueService = app.get(QueueService);
 
     // HTTPS configuration
     const httpsKeyPath = appConfigService.get<string>('HTTPS_KEY_PATH');
@@ -46,20 +54,21 @@ async function bootstrap(): Promise<void> {
     type: VersioningType.URI,
     defaultVersion: '1',
   });
-    // CORS configuration
-    const corsOrigin = appConfigService.get<string>('CORS_ORIGIN');
-    app.enableCors({
-      origin: corsOrigin ? corsOrigin.split(',') : '*',
-      credentials: appConfigService.get<boolean>('CORS_CREDENTIALS', true),
-    });
 
-    // Security middleware
-    app.use(helmet());
-    app.setGlobalPrefix('api/v1');
+  // CORS configuration
+  const corsOrigin = appConfigService.get<string>('CORS_ORIGIN');
+  app.enableCors({
+    origin: corsOrigin ? corsOrigin.split(',') : '*',
+    credentials: appConfigService.get<boolean>('CORS_CREDENTIALS', true),
+  });
 
-    // Global pipes and filters
-    app.useGlobalPipes(AppValidationPipe);
-    app.useGlobalFilters(new GlobalExceptionFilter());
+  // Security middleware
+  app.use(helmet());
+  app.setGlobalPrefix('api/v1');
+
+  // Global pipes and filters
+  app.useGlobalPipes(AppValidationPipe);
+  app.useGlobalFilters(new GlobalExceptionFilter());
 
   app.useGlobalInterceptors(new DeprecationInterceptor());
 
@@ -91,7 +100,7 @@ async function bootstrap(): Promise<void> {
     // Get port from config
     const port = appConfigService.get<number>('PORT', 4000);
     
-    console.log(`---  INTENTANDO ABRIR PUERTO ${port} ---`);
+    logger.log(`---  INTENTANDO ABRIR PUERTO ${port} ---`);
     
     // Connect RabbitMQ microservice
     app.connectMicroservice(rabbitConfig);
@@ -107,14 +116,11 @@ async function bootstrap(): Promise<void> {
     logger.log(`Readiness Probe: http://localhost:${port}/health/ready`);
 
   // Log startup information
-  /* eslint-disable no-console */
-  console.log(`\n🚀 Application is running on: http://localhost:${port}`);
-  console.log(`🌍 Environment: ${configService.get('NODE_ENV', 'development')}`);
-  console.log(`📋 Swagger UI: http://localhost:${port}/api/docs`);
-  /* eslint-enable no-console */
+  logger.log(`\n🚀 Application is running on: http://localhost:${port}`);
+  logger.log(`🌍 Environment: ${configService.get('NODE_ENV', 'development')}`);
+  logger.log(`📋 Swagger UI: http://localhost:${port}/api/docs`);
   } catch (error) {
-    console.error('---  ERROR FATAL DURANTE EL BOOTSTRAP ---');
-    console.error(error);
+    logger.error('---  ERROR FATAL DURANTE EL BOOTSTRAP ---', error);
     process.exit(1);
   }
 }

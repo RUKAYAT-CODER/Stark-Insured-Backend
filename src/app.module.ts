@@ -37,6 +37,7 @@ import { RateLimitingModule } from './common/rate-limiting.module';
 import { QueueModule } from './queue/queue.module';
 import { FraudDetectionModule } from './fraud-detection/fraud-detection.module';
 import { SecurityModule } from './security/security.module';
+import { LoggingModule } from './common/logging/logging.module';
 
 @Module({
   imports: [
@@ -106,6 +107,7 @@ import { SecurityModule } from './security/security.module';
     OracleModule,
     RateLimitingModule,
     FraudDetectionModule,
+    LoggingModule,
   ],
   controllers: [AppController],
   providers: [

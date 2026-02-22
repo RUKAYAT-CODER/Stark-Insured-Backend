@@ -32,13 +32,19 @@ export class AuditLogProcessor {
         timestamp,
       };
 
-      // Log to console or database directly in dev mode
-      console.log('Audit log processed (in-memory):', JSON.stringify(auditEntry, null, 2));
+      // Log to structured logger in dev mode
+      this.logger.log('Audit log processed (in-memory):', {
+        auditEntry,
+        jobId: job.id,
+        mode: 'in-memory',
+      });
       
       // Simulate processing time
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      this.logger.debug(`Audit log successfully processed for job ${job.id} (in-memory mode)`);
+      this.logger.debug(
+        `Audit log successfully processed for job ${job.id} (in-memory mode)`,
+      );
     } catch (error) {
       this.logger.error(`Failed to process audit log: ${error}`, error);
       // Don't throw in stub mode to prevent breaking the application

@@ -52,6 +52,7 @@
     "class-validator": "^0.14.3",
     "cookie-parser": "^1.4.7",
     "csurf": "^1.11.0",
+    "express-winston": "^4.2.0",
     "helmet": "^8.1.0",
     "mixpanel": "^0.20.0",
     "opossum": "^6.0.2",
@@ -68,7 +69,9 @@
     "swagger-ui-express": "^5.0.1",
     "typeorm": "^0.3.28",
     "ua-parser-js": "^1.0.38",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -88,6 +91,7 @@
     "@types/supertest": "^6.0.2",
     "@types/ua-parser-js": "^0.7.39",
     "@types/uuid": "^10.0.0",
+    "@types/winston": "^2.4.4",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
