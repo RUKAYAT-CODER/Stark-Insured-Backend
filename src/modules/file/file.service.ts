@@ -3,6 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { FileUploadResponseDto, FileMetadata } from './dto/file-upload.dto';
 import { FileUploadValidationService } from '../../common/validation/file-upload.validator';
 import { FILE_UPLOAD_SECURITY_CONFIG } from '../../common/config/file-upload-security.config';
+import { uploadToS3, getS3ObjectUrl, getSignedUrl } from './aws-s3.util';
+import { getCloudFrontUrl } from './cloudfront.util';
 
 @Injectable()
 export class FileService {
@@ -12,6 +14,7 @@ export class FileService {
 
   /**
    * Process an uploaded file with comprehensive validation and security checks
+   * Uploads file to AWS S3 and returns CDN/S3 URL
    */
   async processUpload(file: Express.Multer.File, options?: {
     description?: string;
@@ -25,12 +28,22 @@ export class FileService {
     try {
       // Validate the file
       await this.fileValidationService.validateFileUpload(file);
-      
+
       // Generate unique filename
       const uniqueId = uuidv4();
       const extension = this.getFileExtension(file.originalname);
       const storedFilename = `${uniqueId}${extension}`;
-      
+
+      // Upload file to S3
+      // If file.stream exists, use it for large files
+      const uploadSource = file.stream || file.buffer;
+      await uploadToS3(uploadSource, storedFilename, file.mimetype);
+
+      // Generate CDN/S3 URL
+      const s3Url = getS3ObjectUrl(storedFilename);
+      const cdnUrl = process.env.AWS_CLOUDFRONT_DOMAIN ? getCloudFrontUrl(storedFilename) : s3Url;
+      const signedUrl = getSignedUrl(storedFilename);
+
       // Create file metadata
       const metadata: FileMetadata = {
         id: uniqueId,
@@ -39,11 +52,14 @@ export class FileService {
         size: file.size,
         mimetype: file.mimetype,
         extension: extension,
-        url: `/api/v1/files/${uniqueId}`,
+        url: cdnUrl,
         uploadedAt: new Date().toISOString(),
         category: options?.category,
         referenceId: options?.referenceId,
-        hash: this.generateFileHash(file.buffer)
+        hash: this.generateFileHash(file.buffer),
+        signedUrl,
+        s3Url,
+        cdnUrl,
       };
 
       // Return success response
