@@ -2,6 +2,7 @@ import { Module, Global } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ErrorTrackingService } from './services/error-tracking.service';
 import { ErrorTrackingInterceptor } from './interceptors/error-tracking.interceptor';
+import { ErrorTrackingController } from './controllers/error-tracking.controller';
 
 /**
  * Global Error Tracking Module
@@ -17,6 +18,7 @@ import { ErrorTrackingInterceptor } from './interceptors/error-tracking.intercep
       useClass: ErrorTrackingInterceptor,
     },
   ],
+  controllers: [ErrorTrackingController],
   exports: [ErrorTrackingService],
 })
 export class ErrorTrackingModule {}
