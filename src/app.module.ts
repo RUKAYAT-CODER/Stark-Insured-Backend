@@ -3,7 +3,8 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ConfigModule } from './config/config.module';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { CommonModule } from './common/common.module'; 
+import { CommonModule } from './common/common.module';
+import { ErrorTrackingModule } from './common/error-tracking/error-tracking.module';
 import { AppConfigService } from './config/app-config.service';
 import { DatabaseModule } from './common/database/database.module';
 import { IdempotencyModule } from './common/idempotency/idempotency.module';
@@ -26,9 +27,10 @@ import { AuditLogModule } from './common/audit-log/audit-log.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core'; 
-import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
-import { LoggingInterceptor } from './common/interceptors/logging.interceptor'; 
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { EnhancedGlobalExceptionFilter } from './common/filters/enhanced-global-exception.filter';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { ErrorTrackingInterceptor } from './common/error-tracking/interceptors/error-tracking.interceptor';
 import { FilesController } from './modules/files/files.controller';
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
@@ -43,7 +45,8 @@ import { LoggingModule } from './common/logging/logging.module';
   imports: [
     ConfigModule,
     EventEmitterModule.forRoot(),
-    CommonModule, 
+    ErrorTrackingModule,
+    CommonModule,
     HealthModule,
     CommonHealthModule,
     EncryptionModule,
@@ -115,10 +118,14 @@ import { LoggingModule } from './common/logging/logging.module';
     GracefulShutdownService,
     {
       provide: APP_FILTER,
-      useClass: GlobalExceptionFilter,
+      useClass: EnhancedGlobalExceptionFilter,
     },
     {
-      provide: APP_INTERCEPTOR, 
+      provide: APP_INTERCEPTOR,
+      useClass: ErrorTrackingInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
     },
   ],
