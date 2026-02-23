@@ -64,7 +64,7 @@ When you're ready to deploy your NestJS application to production, there are som
 If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
 
 ```bash
-$ npm install -g mau
+$ npm install -g @nestjs/mau
 $ mau deploy
 ```
 
@@ -93,6 +93,44 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 - Website - [https://nestjs.com](https://nestjs.com/)
 - Twitter - [@nestframework](https://twitter.com/nestframework)
 
+## File Upload
+
+The application supports file uploads via the REST API.
+
+### Upload Endpoint
+
+**POST** `/api/v1/files/upload`
+
+Upload a single file using multipart/form-data:
+
+```bash
+curl -X POST http://localhost:3000/api/v1/files/upload \
+  -F "file=@/path/to/your/file.pdf" \
+  -H "Content-Type: multipart/form-data"
+```
+
+### Response
+
+```json
+{
+  "filename": "550e8400-e29b-41d4-a716-446655440000.pdf",
+  "originalname": "file.pdf",
+  "size": 12345,
+  "mimetype": "application/pdf"
+}
+```
+
+### Configuration
+
+- Files are stored in the `./uploads` directory
+- Filenames are UUID-based to prevent collisions
+- The `FileModule` can be imported by other modules to use `FileService`
+
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+
+## Documentation
+
+Full documentation is available in the `/docs` directory.
