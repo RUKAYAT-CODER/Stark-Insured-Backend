@@ -2,14 +2,13 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import * as Sentry from '@sentry/node';
 import { AppValidationPipe } from './common/pipes/validation.pipe';
 import { QueueService } from './modules/queue/queue.service';
 import { VersioningType } from '@nestjs/common';
 import helmet from 'helmet';
 import { DeprecationInterceptor } from './common/interceptors/deprecation.interceptor';
 import { Logger } from '@nestjs/common';
-import helmet from 'helmet';
 import * as fs from 'fs';
 import { rabbitConfig } from './queue/rabbitmq.config';
 import * as cookieParser from 'cookie-parser';
@@ -18,10 +17,37 @@ import { ValidationPipe } from '@nestjs/common';
 import { useContainer } from 'class-validator';
 import { LoggerConfigService } from './common/logging/logger.config';
 
+/**
+ * Initialize Sentry error tracking before app starts
+ */
+function initializeErrorTracking(configService: ConfigService): void {
+  const sentryDsn = configService.get<string>('SENTRY_DSN');
+  const environment = configService.get<string>('NODE_ENV', 'development');
+  const release = configService.get<string>('APP_VERSION', '1.0.0');
+
+  if (sentryDsn) {
+    Sentry.init({
+      dsn: sentryDsn,
+      environment,
+      release,
+      tracesSampleRate: parseFloat(
+        configService.get<string>('SENTRY_TRACES_SAMPLE_RATE', '0.1'),
+      ),
+      integrations: [
+        new Sentry.Integrations.Http({ tracing: true }),
+        new Sentry.Integrations.Db(),
+      ],
+    });
+  }
+}
+
 async function bootstrap(): Promise<void> {
   // Create app instance to get config service
   const app = await NestFactory.create(AppModule, { logger: false });
   const configService = app.get(ConfigService);
+
+  // Initialize error tracking early
+  initializeErrorTracking(configService);
 
   // Initialize centralized logger
   const loggerConfigService = new LoggerConfigService(configService);
@@ -68,7 +94,6 @@ async function bootstrap(): Promise<void> {
 
   // Global pipes and filters
   app.useGlobalPipes(AppValidationPipe);
-  app.useGlobalFilters(new GlobalExceptionFilter());
 
   app.useGlobalInterceptors(new DeprecationInterceptor());
 
