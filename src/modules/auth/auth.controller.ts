@@ -16,6 +16,8 @@ import { LoginChallengeDto } from './dtos/login-challenge.dto';
 import { LoginDto } from './dtos/login.dto';
 import { RefreshTokenDto } from './dtos/refresh-token.dto';
 import { LogoutDto } from './dtos/session.dto';
+import { RevokeTokenDto } from './dtos/revoke-token.dto';
+import { RefreshResponseDto } from './dtos/refresh-response.dto';
 import { MfaSetupVerifyDto, MfaVerifyDto } from './dtos/mfa.dto';
 import {
   ApiTags,
@@ -101,11 +103,22 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Access token refreshed successfully',
+    type: RefreshResponseDto,
   })
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 900000 } }) // 5 requests per 15 minutes
-  async refreshToken(@Body() dto: RefreshTokenDto) {
-    return this.authService.refreshAccessToken(dto.refreshToken);
+  async refreshToken(
+    @Body() dto: RefreshTokenDto,
+    @Req() req: Request,
+  ) {
+    const ipAddress = this.getClientIp(req);
+    const userAgent = req.headers['user-agent'];
+    return this.authService.refreshAccessToken(
+      dto.refreshToken,
+      dto.sessionToken,
+      ipAddress,
+      userAgent as string,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
@@ -116,17 +129,37 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async logout(@Body() dto: LogoutDto, @Req() req: any) {
     const userId = req.user.sub;
+    const authHeader = req.headers['authorization'];
+    let accessToken: string | undefined;
+    if (authHeader && typeof authHeader === 'string') {
+      const parts = authHeader.split(' ');
+      if (parts[0] === 'Bearer' && parts[1]) {
+        accessToken = parts[1];
+      }
+    }
 
     await this.authService.logout(
       userId,
       dto.refreshToken,
       dto.sessionToken,
       dto.logoutAll,
+      accessToken,
     );
 
     return {
       message: 'Logout successful',
     };
+  }
+
+  @Public()
+  @Post('revoke')
+  @ApiOperation({ summary: 'Revoke an access or refresh token' })
+  @ApiResponse({ status: 200, description: 'Token revoked successfully' })
+  @HttpCode(HttpStatus.OK)
+  async revoke(@Body() dto: RevokeTokenDto, @Req() req: Request) {
+    const ipAddress = this.getClientIp(req);
+    await this.authService.revokeToken(dto.token, ipAddress);
+    return { message: 'Token revoked successfully' };
   }
 
   @UseGuards(JwtAuthGuard)

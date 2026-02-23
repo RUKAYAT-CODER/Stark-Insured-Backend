@@ -198,4 +198,25 @@ export class MonitoringService {
     // In a real implementation, this would delete all metrics keys for the identifier
     this.logger.log(`Metrics reset for identifier: ${identifier}`);
   }
+
+  /**
+   * Record a token fraud event for monitoring purposes
+   */
+  async recordTokenFraud(
+    userId: string,
+    ipAddress?: string,
+    details?: any,
+  ): Promise<void> {
+    const dateStr = new Date().toISOString().split('T')[0];
+    const key = `monitoring:token_fraud:${userId}:${ipAddress || 'unknown'}:${dateStr}`;
+    const count = (await this.cacheManager.get<number>(key)) || 0;
+    await this.cacheManager.set(key, count + 1, 86400); // keep one day
+
+    this.logger.warn({
+      message: 'Token fraud event recorded',
+      userId,
+      ipAddress,
+      details,
+    });
+  }
 }

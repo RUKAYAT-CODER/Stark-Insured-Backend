@@ -20,6 +20,10 @@ import { AuthService as SignupAuthService } from './services/auth.service';
 import { WalletService } from './services/wallet.service';
 import { SignupRequestDto } from './dtos/auth.dto';
 import { UserRole, SignupSource } from '../users/entities/user.entity';
+import { AppConfigService } from '../../config/app-config.service';
+import { MonitoringService } from '../../common/services/monitoring.service';
+import { AuditService } from '../audit/services/audit.service';
+import { AuditActionType } from '../audit/enums/audit-action-type.enum';
 
 describe('SignupAuthService', () => {
   let service: SignupAuthService;
@@ -395,6 +399,8 @@ describe('AuthService', () => {
   let refreshTokenService: Partial<RefreshTokenService>;
   let sessionService: Partial<SessionService>;
   let mfaService: Partial<MfaService>;
+  let tokenBlacklistService: Partial<TokenBlacklistService>;
+  let auditService: any;
 
   const mockUser = {
     id: 'user-123',
@@ -423,12 +429,24 @@ describe('AuthService', () => {
         expiresAt: new Date(Date.now() + 86400 * 1000),
         expiresIn: 86400,
       }),
+      verifyAccessToken: jest.fn().mockReturnValue({ type: 'access', sub: mockUser.id }),
+      verifyRefreshToken: jest.fn().mockReturnValue({ type: 'refresh', sub: mockUser.id }),
+      decodeToken: jest.fn().mockReturnValue({ type: 'access', sub: mockUser.id }),
     };
 
     refreshTokenService = {
       createRefreshToken: jest.fn().mockResolvedValue({
         token: 'mock_refresh_token',
       }),
+      validateRefreshToken: jest.fn().mockResolvedValue({
+        user: mockUser,
+        id: 'refresh-id',
+        ipAddress: '1.2.3.4',
+      }),
+      updateLastUsed: jest.fn().mockResolvedValue(undefined),
+      rotateRefreshToken: jest.fn().mockResolvedValue({ token: 'rotated_token' }),
+      revokeToken: jest.fn().mockResolvedValue(undefined),
+      revokeAllUserTokens: jest.fn().mockResolvedValue(1),
     };
 
     sessionService = {
@@ -436,6 +454,9 @@ describe('AuthService', () => {
         session: { id: 'session-123' },
         sessionToken: 'mock_session_token',
       }),
+      getSessionByToken: jest.fn().mockResolvedValue({ id: 'session-123', userId: mockUser.id }),
+      revokeSession: jest.fn().mockResolvedValue(undefined),
+      revokeAllUserSessions: jest.fn().mockResolvedValue(undefined),
     };
 
     mfaService = {
@@ -450,6 +471,12 @@ describe('AuthService', () => {
       del: jest.fn().mockImplementation(key => mockCacheStore.delete(key)),
     };
 
+    const configService = { tokenRotationEnabled: true };
+    const monitoringService = { recordTokenFraud: jest.fn() };
+    auditService = { logAction: jest.fn() };
+
+    tokenBlacklistService = { blacklistToken: jest.fn(), validateTokenNotBlacklisted: jest.fn().mockResolvedValue(undefined) };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -457,10 +484,13 @@ describe('AuthService', () => {
         { provide: JwtService, useValue: jwtService },
         { provide: JwtTokenService, useValue: jwtTokenService },
         { provide: RefreshTokenService, useValue: refreshTokenService },
-        { provide: TokenBlacklistService, useValue: {} },
+        { provide: TokenBlacklistService, useValue: tokenBlacklistService },
         { provide: SessionService, useValue: sessionService },
         { provide: MfaService, useValue: mfaService },
         { provide: CACHE_MANAGER, useValue: cacheManager },
+        { provide: AppConfigService, useValue: configService },
+        { provide: MonitoringService, useValue: monitoringService },
+        { provide: AuditService, useValue: auditService },
       ],
     }).compile();
 
@@ -495,6 +525,14 @@ describe('AuthService', () => {
     expect(loginRes).toHaveProperty('accessToken', 'mock_token');
     expect(loginRes.user.walletAddress).toBe(walletAddress);
 
+    // Audit should have been recorded
+    expect(auditService.logAction).toHaveBeenCalledWith(
+      AuditActionType.LOGIN_SUCCESS,
+      mockUser.id,
+      undefined,
+      expect.any(Object),
+    );
+
     // Verify nonce invalidated (replay attack prevention)
     expect(cacheManager.del).toHaveBeenCalled();
   });
@@ -518,6 +556,81 @@ describe('AuthService', () => {
       InvalidSignatureException,
     );
     // InvalidSignatureException extends UnauthorizedException
+  });
+
+  describe('refreshAccessToken', () => {
+    it('should rotate refresh token when enabled', async () => {
+      const result = await service.refreshAccessToken(
+        'old_token',
+        undefined,
+        '5.6.7.8',
+        'ua',
+      );
+      expect(tokenBlacklistService.validateTokenNotBlacklisted).toHaveBeenCalledWith('old_token');
+      expect(refreshTokenService.validateRefreshToken).toHaveBeenCalledWith('old_token');
+      expect(refreshTokenService.rotateRefreshToken).toHaveBeenCalledWith('old_token', mockUser.id);
+      expect(result).toHaveProperty('accessToken', 'mock_token');
+      expect(result.refreshToken).toBe('rotated_token');
+      expect(monitoringService.recordTokenFraud).not.toHaveBeenCalled();
+    });
+
+    it('should record fraud metric on ip mismatch', async () => {
+      // adjust validate to return different ip
+      (refreshTokenService.validateRefreshToken as jest.Mock).mockResolvedValueOnce({
+        user: mockUser,
+        id: 'refresh-id',
+        ipAddress: '1.2.3.4',
+      });
+      const result = await service.refreshAccessToken(
+        'old_token',
+        undefined,
+        '9.9.9.9',
+        'ua',
+      );
+      expect(tokenBlacklistService.validateTokenNotBlacklisted).toHaveBeenCalledWith('old_token');
+      expect(monitoringService.recordTokenFraud).toHaveBeenCalledWith(mockUser.id, '9.9.9.9', expect.any(Object));
+    });
+  });
+
+  describe('token revocation and logout', () => {
+    it('should revoke access token and log on revokeToken()', async () => {
+      (jwtTokenService.decodeToken as jest.Mock).mockReturnValue({ type: 'access', sub: mockUser.id });
+      await service.revokeToken('access-token', '1.1.1.1');
+      expect(jwtTokenService.verifyAccessToken).toHaveBeenCalledWith('access-token');
+      expect(tokenBlacklistService.blacklistToken).toHaveBeenCalledWith(
+        'access-token',
+        mockUser.id,
+        'User requested revocation',
+        '1.1.1.1',
+      );
+      expect(auditService.logAction).toHaveBeenCalledWith(
+        expect.any(String),
+        mockUser.id,
+        undefined,
+        expect.objectContaining({ tokenType: 'access' }),
+      );
+    });
+
+    it('should revoke refresh token and log on revokeToken()', async () => {
+      (jwtTokenService.decodeToken as jest.Mock).mockReturnValue({ type: 'refresh', sub: mockUser.id });
+      await service.revokeToken('refresh-token', '1.1.1.1');
+      expect(jwtTokenService.verifyRefreshToken).toHaveBeenCalledWith('refresh-token');
+      expect(refreshTokenService.revokeToken).toHaveBeenCalledWith('refresh-token', 'User requested revocation');
+    });
+
+    it('should blacklist current access token on logout', async () => {
+      await service.logout(mockUser.id, undefined, undefined, false, 'curr-token');
+      expect(tokenBlacklistService.blacklistToken).toHaveBeenCalledWith(
+        'curr-token',
+        mockUser.id,
+        'User logged out',
+      );
+      expect(auditService.logAction).toHaveBeenCalledWith(
+        AuditActionType.LOGOUT,
+        mockUser.id,
+      );
+    });
+  });
     await expect(
       service.login(walletAddress, signature),
     ).rejects.toThrow(UnauthorizedException);

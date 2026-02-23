@@ -10,6 +10,8 @@ import { AppConfigService } from '../../config/app-config.service';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { AuditModule } from '../audit/audit.module';
+import { MonitoringService } from '../../common/services/monitoring.service';
 import { WalletService } from './services/wallet.service';
 import { PermissionService } from 'src/permissions/permission.service';
 import { PermissionGuard } from 'src/permissions/permission.guard';
@@ -52,6 +54,7 @@ import { SessionService } from './services/session.service';
       }),
       inject: [AppConfigService],
     }),
+    AuditModule,
   ],
   providers: [
     AuthService,
@@ -64,6 +67,8 @@ import { SessionService } from './services/session.service';
     TokenBlacklistService,
     MfaService,
     SessionService,
+    MonitoringService,
+    MonitoringService,
 
     // Permission services
     PermissionService,

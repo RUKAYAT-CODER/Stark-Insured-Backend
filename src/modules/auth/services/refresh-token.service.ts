@@ -45,6 +45,7 @@ export class RefreshTokenService {
       token,
       tokenHash,
       expiresAt,
+      rotationCount: 0, // initial rotation count
     });
 
     await this.refreshTokenRepo.save(refreshToken);
@@ -209,6 +210,15 @@ export class RefreshTokenService {
     userId: string,
     sessionId?: string,
   ): Promise<RefreshToken> {
+    // Attempt to load old token record so we can increment rotation count
+    let oldRecord: RefreshToken | undefined;
+    try {
+      const oldHash = this.hashToken(oldToken);
+      oldRecord = await this.refreshTokenRepo.findOne({ where: { tokenHash: oldHash } });
+    } catch (err) {
+      this.logger.warn(`Failed to load old token record during rotation: ${err.message}`);
+    }
+
     // Validate and revoke old token
     try {
       await this.revokeToken(oldToken, 'Token rotated');
@@ -218,6 +228,12 @@ export class RefreshTokenService {
 
     // Create new token
     const newToken = await this.createRefreshToken(userId, sessionId);
+
+    // propagate rotation count if available
+    if (oldRecord) {
+      newToken.rotationCount = (oldRecord.rotationCount || 0) + 1;
+      await this.refreshTokenRepo.save(newToken);
+    }
 
     return newToken;
   }

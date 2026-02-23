@@ -28,6 +28,9 @@ export class RefreshToken extends BaseEntity {
   @Column({ nullable: true })
   revokedReason?: string;
 
+  @Column({ type: 'int', default: 0 })
+  rotationCount: number;
+
   @Column()
   expiresAt: Date;
 

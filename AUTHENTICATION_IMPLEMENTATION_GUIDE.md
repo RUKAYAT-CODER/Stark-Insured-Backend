@@ -126,15 +126,28 @@ curl -X POST http://localhost:4000/api/v1/auth/token/refresh \
   }
 ```
 
-Response:
+Response (rotation enabled returns new refresh token):
 ```json
 {
   "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "expiresIn": 900,
   "expiresAt": "2026-02-20T10:15:00.000Z",
-  "tokenType": "Bearer"
+  "tokenType": "Bearer",
+  "refreshToken": "<newRefreshToken>"
 }
 ```
+
+### Revoking Tokens
+
+If you detect a compromised token or user requests revocation, call the revoke endpoint:
+
+```bash
+curl -X POST http://localhost:4000/api/v1/auth/revoke \
+  -H "Content-Type: application/json" \
+  -d '{"token":"<accessOrRefreshToken>"}'
+```
+
+The server will blacklist or revoke the supplied token immediately and audit the action.
 
 ### MFA Setup Flow
 

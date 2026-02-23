@@ -160,5 +160,44 @@ describe('AuthController (e2e)', () => {
         })
         .expect(404); // Challenge not found
     });
+
+    it('should rotate refresh token when calling refresh endpoint', async () => {
+      // seed and login to receive tokens
+      await usersService.create(validWalletAddress);
+      const chal = await request(app.getHttpServer())
+        .post('/api/v1/auth/login/challenge')
+        .send({ walletAddress: validWalletAddress });
+      const sig = validWallet.sign(Buffer.from(chal.body.challenge)).toString('base64');
+      const loginRes = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ walletAddress: validWalletAddress, signature: sig });
+      const refreshToken = loginRes.body.refreshToken;
+
+      const refreshRes = await request(app.getHttpServer())
+        .post('/api/v1/auth/token/refresh')
+        .send({ refreshToken });
+      expect(refreshRes.body).toHaveProperty('accessToken');
+      expect(refreshRes.body).toHaveProperty('refreshToken');
+      expect(refreshRes.body.refreshToken).not.toBe(refreshToken);
+    });
+
+    it('should allow revocation of access token', async () => {
+      // login and get access token
+      await usersService.create(validWalletAddress);
+      const chal = await request(app.getHttpServer())
+        .post('/api/v1/auth/login/challenge')
+        .send({ walletAddress: validWalletAddress });
+      const sig = validWallet.sign(Buffer.from(chal.body.challenge)).toString('base64');
+      const loginRes = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ walletAddress: validWalletAddress, signature: sig });
+      const accessToken = loginRes.body.accessToken;
+
+      const revokeRes = await request(app.getHttpServer())
+        .post('/api/v1/auth/revoke')
+        .send({ token: accessToken });
+      expect(revokeRes.status).toBe(200);
+    });
+    
   });
 });

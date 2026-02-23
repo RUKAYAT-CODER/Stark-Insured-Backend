@@ -29,6 +29,8 @@ This document outlines the comprehensive validation and sanitization system impl
 
 ### Authentication Endpoints
 - **POST /auth/login**
+- **POST /auth/token/refresh** - returns new access token and rotated refresh token when enabled
+- **POST /auth/revoke** - revoke an access or refresh token immediately
   - Email validation with disposable domain detection
   - Password strength requirements (8+ chars, mixed case, numbers, special chars)
   - Rate limiting: 5 attempts per 15 minutes
