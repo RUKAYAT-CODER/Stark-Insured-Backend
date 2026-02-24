@@ -22,6 +22,7 @@ import { Idempotent } from 'src/common/idempotency';
 import { PaginationDto } from 'src/common/pagination/dto/pagination.dto';
 import { PaginatedResult } from 'src/common/pagination/interfaces/paginated-result.interface';
 import { Throttle } from '@nestjs/throttler';
+import { RateLimit } from '../../common/decorators/rate-limit.decorator';
 
 @Controller('claims')
 export class ClaimController {
@@ -37,7 +38,7 @@ export class ClaimController {
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @Throttle({ default: { limit: 5, ttl: 3600000 } }) // 5 claims per hour per user
+  @RateLimit('sensitive')
   @Idempotent()
   async createClaim(req: any, createClaimDto: CreateClaimDto): Promise<Claim> {
     const userId = req.user?.id;
@@ -55,7 +56,7 @@ export class ClaimController {
    * Requires: claim owner or admin
    */
   @Get(':claimId')
-  @Throttle({ default: { limit: 50, ttl: 60000 } }) // 50 requests per minute per user
+  @RateLimit('authenticated')
   @UseGuards(ClaimOwnerGuard)
   async getClaimById(claimId: string): Promise<Claim> {
     const claim = await this.claimService.getClaimById(claimId);
@@ -72,7 +73,7 @@ export class ClaimController {
    * Retrieve all claims for the authenticated user
    */
   @Get('user/me')
-  @Throttle({ default: { limit: 30, ttl: 60000 } }) // 30 requests per minute per user
+  @RateLimit('authenticated')
   async getUserClaims(
     req: any,
     @Query() paginationDto: PaginationDto,
@@ -92,7 +93,7 @@ export class ClaimController {
    * Note: Admin endpoint - should be restricted
    */
   @Get('policy/:policyId')
-  @Throttle({ admin: { limit: 100, ttl: 60000 } }) // 100 requests per minute for admin
+  @RateLimit('admin')
   async getPolicyClaims(
     policyId: string,
     @Query() paginationDto: PaginationDto,
