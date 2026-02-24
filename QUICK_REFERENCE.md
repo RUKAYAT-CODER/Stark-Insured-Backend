@@ -48,8 +48,9 @@ MFA_REQUIRED=false
 |--------|----------|------|---------|
 | POST | `/auth/login/challenge` | No | Get login challenge |
 | POST | `/auth/login` | No | Submit signature |
-| POST | `/auth/token/refresh` | No | Refresh access token |
+| POST | `/auth/token/refresh` | No | Refresh access token (returns new refresh token if rotation enabled) |
 | POST | `/auth/logout` | JWT | Logout user |
+| POST | `/auth/revoke` | No | Revoke a specific access or refresh token |
 | POST | `/auth/mfa/setup/totp` | JWT | Start MFA setup |
 | POST | `/auth/mfa/setup/verify` | JWT | Enable MFA |
 | GET | `/auth/mfa/status` | JWT | Check MFA status |

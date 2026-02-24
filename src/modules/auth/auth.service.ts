@@ -15,6 +15,10 @@ import { RefreshTokenService } from './services/refresh-token.service';
 import { TokenBlacklistService } from './services/token-blacklist.service';
 import { SessionService } from './services/session.service';
 import { MfaService } from './services/mfa.service';
+import { AppConfigService } from '../../config/app-config.service';
+import { MonitoringService } from '../../common/services/monitoring.service';
+import { AuditService } from '../audit/services/audit.service';
+import { AuditActionType } from '../audit/enums/audit-action-type.enum';
 import * as crypto from 'crypto';
 import { Keypair } from 'stellar-sdk';
 import { ChallengeNotFoundException } from './exceptions/challenge-not-found.exception';
@@ -39,6 +43,14 @@ export interface LoginResponse {
   sessionId?: string;
 }
 
+export interface RefreshResponse {
+  accessToken: string;
+  refreshToken?: string;
+  expiresIn: number;
+  expiresAt: Date;
+  tokenType: 'Bearer';
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -51,6 +63,9 @@ export class AuthService {
     private tokenBlacklistService: TokenBlacklistService,
     private sessionService: SessionService,
     private mfaService: MfaService,
+    private configService: AppConfigService,
+    private monitoringService: MonitoringService,
+    private auditService: AuditService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
@@ -154,6 +169,14 @@ export class AuthService {
 
     this.logger.log(`Login successful for user ${user.id} (${walletAddress})`);
 
+    // Audit login success
+    await this.auditService.logAction(
+      AuditActionType.LOGIN_SUCCESS,
+      user.id,
+      undefined,
+      { ipAddress, userAgent },
+    );
+
     // Generate tokens and session
     return this.generateTokens(user, ipAddress, userAgent);
   }
@@ -161,13 +184,16 @@ export class AuthService {
   /**
    * Refresh access token using refresh token
    */
-  async refreshAccessToken(refreshToken: string): Promise<{
-    accessToken: string;
-    expiresIn: number;
-    expiresAt: Date;
-    tokenType: 'Bearer';
-  }> {
+  async refreshAccessToken(
+    refreshToken: string,
+    sessionToken?: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<RefreshResponse> {
     this.logger.log('Attempting to refresh access token');
+
+    // Ensure the provided refresh token isn't on the blacklist
+    await this.tokenBlacklistService.validateTokenNotBlacklisted(refreshToken);
 
     // Validate refresh token
     const storedRefreshToken =
@@ -179,6 +205,40 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
+    // Detect suspicious activity
+    if (
+      ipAddress &&
+      storedRefreshToken.ipAddress &&
+      storedRefreshToken.ipAddress !== ipAddress
+    ) {
+      // log metric and audit
+      await this.monitoringService.recordTokenFraud(user.id, ipAddress, {
+        reason: 'ip_mismatch',
+        previousIp: storedRefreshToken.ipAddress,
+      });
+      await this.auditService.logAction(
+        AuditActionType.FRAUD_ALERT_TRIGGERED,
+        user.id,
+        undefined,
+        {
+          reason: 'IP mismatch on refresh token',
+          previousIp: storedRefreshToken.ipAddress,
+          currentIp: ipAddress,
+        },
+      );
+    }
+
+    // Optionally rotate refresh token
+    let newRefreshToken: string | undefined;
+    if (this.configService.tokenRotationEnabled) {
+      const rotated = await this.refreshTokenService.rotateRefreshToken(
+        refreshToken,
+        user.id,
+      );
+      newRefreshToken = rotated.token;
+      refreshToken = newRefreshToken;
+    }
+
     // Generate new access token
     const { token, expiresAt, expiresIn } =
       this.jwtTokenService.generateAccessToken(
@@ -186,25 +246,31 @@ export class AuthService {
         storedRefreshToken.id,
       );
 
-    // Update last used timestamp
-    await this.refreshTokenService.updateLastUsed(
-      refreshToken,
-    );
+    // Update last used timestamp on whatever refresh token is now current
+    await this.refreshTokenService.updateLastUsed(refreshToken, ipAddress);
 
-    // Optionally rotate refresh token
-    // const newRefreshToken = await this.refreshTokenService.rotateRefreshToken(
-    //   refreshToken,
-    //   user.id,
-    // );
+    // Audit token refresh event
+    await this.auditService.logAction(
+      AuditActionType.TOKEN_REFRESHED,
+      user.id,
+      undefined,
+      { rotated: !!newRefreshToken, ipAddress, userAgent },
+    );
 
     this.logger.log(`Access token refreshed for user ${user.id}`);
 
-    return {
+    const response: RefreshResponse = {
       accessToken: token,
       expiresIn,
       expiresAt,
       tokenType: 'Bearer',
     };
+
+    if (newRefreshToken) {
+      response.refreshToken = newRefreshToken;
+    }
+
+    return response;
   }
 
   /**
@@ -215,8 +281,21 @@ export class AuthService {
     refreshToken?: string,
     sessionToken?: string,
     logoutAll?: boolean,
+    accessToken?: string,
   ): Promise<void> {
     this.logger.log(`Logout initiated for user ${userId}`);
+
+    if (accessToken) {
+      try {
+        await this.tokenBlacklistService.blacklistToken(
+          accessToken,
+          userId,
+          'User logged out',
+        );
+      } catch (error) {
+        this.logger.warn(`Failed to blacklist access token: ${error.message}`);
+      }
+    }
 
     if (logoutAll) {
       // Revoke all refresh tokens
@@ -258,7 +337,57 @@ export class AuthService {
       }
     }
 
+    await this.auditService.logAction(AuditActionType.LOGOUT, userId);
+
     this.logger.log(`Logout completed for user ${userId}`);
+  }
+
+  /**
+   * Revoke a provided token (access or refresh) immediately
+   */
+  async revokeToken(token: string, ipAddress?: string): Promise<void> {
+    // Determine token type and act accordingly
+    let payload;
+    try {
+      payload = this.jwtTokenService.decodeToken(token);
+    } catch (error) {
+      throw new BadRequestException('Unable to decode token');
+    }
+
+    if (!payload || !payload.type) {
+      throw new BadRequestException('Invalid token');
+    }
+
+    try {
+      if (payload.type === 'access') {
+        this.jwtTokenService.verifyAccessToken(token);
+        await this.tokenBlacklistService.blacklistToken(
+          token,
+          payload.sub,
+          'User requested revocation',
+          ipAddress,
+        );
+      } else if (payload.type === 'refresh') {
+        this.jwtTokenService.verifyRefreshToken(token);
+        await this.refreshTokenService.revokeToken(token, 'User requested revocation');
+      } else {
+        throw new BadRequestException('Unsupported token type');
+      }
+    } catch (err) {
+      // if verification failed, bubble up as bad request
+      if (err instanceof BadRequestException) {
+        throw err;
+      }
+      throw new BadRequestException('Failed to revoke token');
+    }
+
+    // Audit
+    await this.auditService.logAction(
+      AuditActionType.TOKEN_REVOKED,
+      payload.sub,
+      undefined,
+      { tokenType: payload.type, ipAddress },
+    );
   }
 
   /**
