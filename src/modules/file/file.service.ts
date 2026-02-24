@@ -9,18 +9,21 @@ import { getCloudFrontUrl } from './cloudfront.util';
 @Injectable()
 export class FileService {
   constructor(
-    private readonly fileValidationService: FileUploadValidationService
+    private readonly fileValidationService: FileUploadValidationService,
   ) {}
 
   /**
    * Process an uploaded file with comprehensive validation and security checks
    * Uploads file to AWS S3 and returns CDN/S3 URL
    */
-  async processUpload(file: Express.Multer.File, options?: {
-    description?: string;
-    category?: string;
-    referenceId?: string;
-  }): Promise<FileUploadResponseDto> {
+  async processUpload(
+    file: Express.Multer.File,
+    options?: {
+      description?: string;
+      category?: string;
+      referenceId?: string;
+    },
+  ): Promise<FileUploadResponseDto> {
     if (!file) {
       throw new BadRequestException('No file provided');
     }
@@ -41,8 +44,10 @@ export class FileService {
 
       // Generate CDN/S3 URL
       const s3Url = getS3ObjectUrl(storedFilename);
-      const cdnUrl = process.env.AWS_CLOUDFRONT_DOMAIN ? getCloudFrontUrl(storedFilename) : s3Url;
-      const signedUrl = getSignedUrl(storedFilename);
+      const cdnUrl = process.env.AWS_CLOUDFRONT_DOMAIN
+        ? getCloudFrontUrl(storedFilename)
+        : s3Url;
+      const signedUrl = await getSignedUrl(storedFilename);
 
       // Create file metadata
       const metadata: FileMetadata = {
@@ -67,15 +72,14 @@ export class FileService {
         success: true,
         message: 'File uploaded successfully',
         data: metadata,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
-
     } catch (error) {
       // Re-throw validation errors for proper error handling
       if (error.name === 'FileValidationError') {
         throw error;
       }
-      
+
       throw new BadRequestException('File processing failed: ' + error.message);
     }
   }
@@ -91,20 +95,22 @@ export class FileService {
     if (!file) {
       return {
         isValid: false,
-        errors: [{
-          type: 'NO_FILE',
-          message: 'No file provided',
-          field: 'file'
-        }]
+        errors: [
+          {
+            type: 'NO_FILE',
+            message: 'No file provided',
+            field: 'file',
+          },
+        ],
       };
     }
 
     try {
       await this.fileValidationService.validateFileUpload(file);
-      
+
       // If validation passes, return basic metadata
       const extension = this.getFileExtension(file.originalname);
-      
+
       return {
         isValid: true,
         metadata: {
@@ -115,10 +121,9 @@ export class FileService {
           mimetype: file.mimetype,
           extension: extension,
           url: '',
-          uploadedAt: new Date().toISOString()
-        }
+          uploadedAt: new Date().toISOString(),
+        },
       };
-
     } catch (error) {
       if (error.name === 'FileValidationError') {
         return {
@@ -127,22 +132,26 @@ export class FileService {
             type: v.code,
             message: v.message,
             field: v.field,
-            details: v.details
-          })) || [{
-            type: 'VALIDATION_ERROR',
-            message: error.message,
-            field: 'file'
-          }]
+            details: v.details,
+          })) || [
+            {
+              type: 'VALIDATION_ERROR',
+              message: error.message,
+              field: 'file',
+            },
+          ],
         };
       }
-      
+
       return {
         isValid: false,
-        errors: [{
-          type: 'PROCESSING_ERROR',
-          message: error.message,
-          field: 'file'
-        }]
+        errors: [
+          {
+            type: 'PROCESSING_ERROR',
+            message: error.message,
+            field: 'file',
+          },
+        ],
       };
     }
   }
@@ -187,10 +196,10 @@ export class FileService {
    */
   private getFileExtension(filename: string): string {
     if (!filename) return '';
-    
+
     const parts = filename.split('.');
     if (parts.length < 2) return '';
-    
+
     return '.' + parts[parts.length - 1].toLowerCase();
   }
 
@@ -201,13 +210,13 @@ export class FileService {
   private generateFileHash(buffer: Buffer): string {
     // Simple hash for demonstration - use proper crypto in production
     if (!buffer || buffer.length === 0) return '';
-    
+
     // Simple checksum (not secure, for demonstration only)
     let hash = 0;
     for (let i = 0; i < Math.min(buffer.length, 1000); i++) {
       hash = ((hash << 5) - hash + buffer[i]) & 0xffffffff;
     }
-    
+
     return `simple:${Math.abs(hash).toString(16)}`;
   }
 }
