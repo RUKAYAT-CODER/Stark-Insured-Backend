@@ -33,6 +33,8 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ErrorTrackingInterceptor } from './common/error-tracking/interceptors/error-tracking.interceptor';
 import { FilesController } from './modules/files/files.controller';
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
+import { TieredRateLimitGuard } from './common/guards/tiered-rate-limit.guard';
+import { RateLimitConfigService } from './common/config/rate-limit-config.service';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { OracleModule } from './modules/oracle/oracle.module';
 import { RateLimitingModule } from './common/rate-limiting.module';
@@ -57,41 +59,10 @@ import { LoggingModule } from './common/logging/logging.module';
     IdempotencyModule,
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: AppConfigService) => ({
-        throttlers: [
-          {
-            name: 'default',
-            ttl: configService.throttleDefaultTtl,
-            limit: configService.throttleDefaultLimit,
-          },
-          {
-            name: 'auth',
-            ttl: configService.throttleAuthTtl,
-            limit: configService.throttleAuthLimit,
-          },
-          {
-            name: 'public',
-            ttl: configService.throttlePublicTtl,
-            limit: configService.throttlePublicLimit,
-          },
-          {
-            name: 'admin',
-            ttl: configService.throttleAdminTtl,
-            limit: configService.throttleAdminLimit,
-          },
-          {
-            name: 'claims',
-            ttl: configService.rateLimitCreateClaimTtl,
-            limit: configService.rateLimitCreateClaimLimit,
-          },
-          {
-            name: 'policies',
-            ttl: configService.rateLimitCreatePolicyTtl,
-            limit: configService.rateLimitCreatePolicyLimit,
-          },
-        ],
+      useFactory: (rateLimitConfigService: RateLimitConfigService) => ({
+        throttlers: rateLimitConfigService.getThrottlerConfig(),
       }),
-      inject: [AppConfigService],
+      inject: [RateLimitConfigService],
     }),
     HealthModule,
     ClaimsModule,
@@ -116,6 +87,7 @@ import { LoggingModule } from './common/logging/logging.module';
   providers: [
     AppService,
     GracefulShutdownService,
+    RateLimitConfigService,
     {
       provide: APP_FILTER,
       useClass: EnhancedGlobalExceptionFilter,
@@ -127,6 +99,10 @@ import { LoggingModule } from './common/logging/logging.module';
     {
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
+    },
+    {
+      provide: 'APP_GUARD',
+      useClass: TieredRateLimitGuard,
     },
   ],
 })

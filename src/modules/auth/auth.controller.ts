@@ -27,6 +27,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { RateLimit } from '../../common/decorators/rate-limit.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { MfaService } from './services/mfa.service';
@@ -49,7 +50,11 @@ export class AuthController {
   @Post('register')
   @ApiOperation({ summary: 'Register a new user with email and password' })
   @ApiResponse({ status: 201, description: 'User registered successfully' })
+  @ApiTooManyRequestsResponse({
+    description: 'Rate limit exceeded. Too many registration attempts.',
+  })
   @HttpCode(HttpStatus.CREATED)
+  @RateLimit('auth')
   async register(@Body() dto: RegisterDto) {
     return this.authServices.register(dto);
   }
@@ -58,7 +63,11 @@ export class AuthController {
   @Post('login/password')
   @ApiOperation({ summary: 'Login with email and password' })
   @ApiResponse({ status: 200, description: 'Login successful, JWT issued' })
+  @ApiTooManyRequestsResponse({
+    description: 'Rate limit exceeded. Too many login attempts.',
+  })
   @HttpCode(HttpStatus.OK)
+  @RateLimit('auth')
   async loginWithPassword(@Body() dto: LoginPasswordDto) {
     return this.authServices.loginWithPassword(dto);
   }
@@ -71,7 +80,7 @@ export class AuthController {
     description: 'Rate limit exceeded. Too many challenge requests.',
   })
   @HttpCode(HttpStatus.OK)
-  @Throttle({ auth: { limit: 5, ttl: 900000 } }) // 5 requests per 15 minutes
+  @RateLimit('auth')
   async getLoginChallenge(@Body() dto: LoginChallengeDto) {
     return this.authService.generateChallenge(dto.walletAddress);
   }
@@ -84,7 +93,7 @@ export class AuthController {
     description: 'Rate limit exceeded. Too many login attempts.',
   })
   @HttpCode(HttpStatus.OK)
-  @Throttle({ auth: { limit: 10, ttl: 3600000 } }) // 10 requests per hour
+  @RateLimit('auth')
   async login(@Body() dto: LoginDto, @Req() req: Request) {
     const ipAddress = this.getClientIp(req);
     const userAgent = req.headers['user-agent'];
