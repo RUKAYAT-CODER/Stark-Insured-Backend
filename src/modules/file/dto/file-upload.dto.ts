@@ -73,6 +73,24 @@ export class FileMetadata {
     required: false,
   })
   hash?: string;
+
+  @ApiProperty({
+    description: 'Pre-signed URL for temporary direct access',
+    required: false,
+  })
+  signedUrl?: string;
+
+  @ApiProperty({
+    description: 'Direct S3 object URL',
+    required: false,
+  })
+  s3Url?: string;
+
+  @ApiProperty({
+    description: 'CDN URL for the file',
+    required: false,
+  })
+  cdnUrl?: string;
 }
 
 /**
