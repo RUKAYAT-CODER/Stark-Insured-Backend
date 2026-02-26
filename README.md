@@ -1,136 +1,112 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+📘 BACKEND README
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+(NestJS – Stellar Insured Backend API)
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Stellar Insured ⚙️ — Backend API
 
-## Description
+The Stellar Insured backend is a secure and scalable API layer that supports decentralized insurance operations such as policy management, claims processing, DAO governance, oracle verification, and analytics.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Built with NestJS, this backend serves frontend clients, DAO participants, and third-party integrations, while coordinating off-chain logic such as fraud detection and data aggregation—without compromising the trustless nature of Stellar-based smart contracts.
 
-## Project setup
+✨ Core Responsibilities
 
-```bash
-$ npm install
-```
+Insurance policy lifecycle management
 
-## Compile and run the project
+Claim submission and verification
 
-```bash
-# development
-$ npm run start
+DAO proposals, voting, and result tracking
 
-# watch mode
-$ npm run start:dev
+Oracle data ingestion
 
-# production mode
-$ npm run start:prod
-```
+Fraud detection and monitoring
 
-## Run tests
+Analytics and reporting APIs
 
-```bash
-# unit tests
-$ npm run test
+🧑‍💻 Tech Stack
 
-# e2e tests
-$ npm run test:e2e
+Framework: NestJS
 
-# test coverage
-$ npm run test:cov
-```
+Language: TypeScript
 
-## Deployment
+Runtime: Node.js 18+
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+Database: PostgreSQL or MongoDB
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Cache: Redis
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+Testing: Jest, Supertest
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Deployment: Docker, Cloud providers
 
-## Resources
+📦 Installation & Setup
+Prerequisites
 
-Check out a few resources that may come in handy when working with NestJS:
+Node.js 18+
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+npm
 
-## Support
+PostgreSQL or MongoDB
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Redis
 
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## File Upload
-
-The application supports file uploads via the REST API.
-
-### Upload Endpoint
-
-**POST** `/api/v1/files/upload`
-
-Upload a single file using multipart/form-data:
-
-```bash
-curl -X POST http://localhost:3000/api/v1/files/upload \
-  -F "file=@/path/to/your/file.pdf" \
-  -H "Content-Type: multipart/form-data"
-```
-
-### Response
-
-```json
-{
-  "filename": "550e8400-e29b-41d4-a716-446655440000.pdf",
-  "originalname": "file.pdf",
-  "size": 12345,
-  "mimetype": "application/pdf"
-}
-```
-
-### Configuration
-
-- Files are stored in the `./uploads` directory
-- Filenames are UUID-based to prevent collisions
-- The `FileModule` can be imported by other modules to use `FileService`
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Environment Setup
+cp .env.example .env
 
 
-## Documentation
+Example environment variables:
 
-Full documentation is available in the `/docs` directory.
+PORT=4000
+DATABASE_URL=postgres://user:password@localhost:5432/stellar_insured
+REDIS_URL=redis://localhost:6379
+
+STELLAR_NETWORK=testnet
+STELLAR_HORIZON_URL=https://horizon-testnet.stellar.org
+
+Running the Server
+# Install dependencies
+npm install
+
+# Development mode
+npm run start:dev
+
+# Production mode
+npm run start:prod
+
+🧪 Testing
+# Unit tests
+npm run test
+
+# End-to-end tests
+npm run test:e2e
+
+# Test coverage
+npm run test:cov
+
+🌐 API Documentation
+
+Swagger UI: http://localhost:4000/api/docs
+
+⚠️ **Error Handling**
+
+All endpoints return standardized error responses. Clients should inspect the
+`errorCode` field (see `ERROR_CODES.md`) and present the accompanying
+`message` to users. Transient failures are automatically retried by internal
+clients and downstream circuits prevent cascading outages.
+
+🤝 Contributing
+
+Fork the repository
+
+Create a feature branch
+
+Add tests for new features
+
+Open a Pull Request
+
+📚 Resources
+
+NestJS Docs: https://docs.nestjs.com
+
+Stellar Docs: https://developers.stellar.org
+
+Soroban Docs: https://soroban.stellar.org/docs
