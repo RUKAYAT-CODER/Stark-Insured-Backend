@@ -4,8 +4,7 @@
   "sourceRoot": "src",
   "compilerOptions": {
     "deleteOutDir": false,
-    "webpack": true,
-    "webpackConfigPath": "webpack.config.js",
+    "webpack": false,
     "typeCheck": false,
     "watchAssets": true,
     "assets": [
