@@ -29,6 +29,8 @@ model User {
   reputationHistory    ReputationHistory[]
   notificationSettings NotificationSetting?
   notifications        Notification[]
+  proposals            Proposal[]           @relation("ProposalCreator")
+  votes                Vote[]               @relation("UserVotes")
 
   @@map("users")
 }
@@ -219,4 +221,41 @@ enum EmailStatus {
   PENDING
   SENT
   FAILED
+}
+
+model Proposal {
+  id          String         @id @default(cuid())
+  title       String
+  description String
+  creatorId   String         @map("creator_id")
+  creator     User           @relation("ProposalCreator", fields: [creatorId], references: [id])
+  status      ProposalStatus @default(PENDING)
+  votes       Vote[]
+  expiresAt   DateTime       @map("expires_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  @@map("proposals")
+}
+
+model Vote {
+  id         String   @id @default(cuid())
+  proposalId String   @map("proposal_id")
+  proposal   Proposal @relation(fields: [proposalId], references: [id])
+  voterId    String   @map("voter_id")
+  voter      User     @relation("UserVotes", fields: [voterId], references: [id])
+  support    Boolean
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([proposalId, voterId])
+  @@map("votes")
+}
+
+enum ProposalStatus {
+  PENDING
+  ACTIVE
+  SUCCEEDED
+  DEFEATED
+  EXECUTED
+  CANCELLED
 }
