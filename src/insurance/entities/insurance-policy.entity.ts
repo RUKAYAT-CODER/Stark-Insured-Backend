@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
 import { RiskType } from '../enums/risk-type.enum';
+import { PolicyStatus } from '../enums/policy-status.enum';
 
 @Entity('insurance_policies')
 export class InsurancePolicy {
@@ -11,6 +12,9 @@ export class InsurancePolicy {
 
   @Column({ type: 'enum', enum: RiskType })
   riskType: RiskType;
+
+  @Column({ type: 'enum', enum: PolicyStatus, default: PolicyStatus.PENDING })
+  status: PolicyStatus;
 
   @Column('decimal')
   premium: number;
