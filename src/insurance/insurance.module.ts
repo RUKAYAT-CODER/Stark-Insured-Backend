@@ -5,6 +5,8 @@ import { InsurancePolicy } from './entities/insurance-policy.entity';
 import { InsurancePool } from './entities/insurance-pool.entity';
 import { Claim } from './entities/claim.entity';
 import { ReinsuranceContract } from './entities/reinsurance-contract.entity';
+import { ClaimHistory } from './entities/claim-history.entity';
+import { PolicyHistory } from './entities/policy-history.entity';
 
 import { InsuranceController } from './insurance.controller';
 
@@ -21,6 +23,8 @@ import { PricingService } from './pricing.service';
       InsurancePool,
       Claim,
       ReinsuranceContract,
+      ClaimHistory,
+      PolicyHistory,
     ]),
   ],
   controllers: [InsuranceController],
