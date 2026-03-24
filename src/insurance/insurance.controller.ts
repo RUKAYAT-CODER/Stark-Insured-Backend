@@ -1,10 +1,15 @@
-import { Controller, Post, Get, Param, Body } from '@nestjs/common';
+import { Controller, Post, Get, Param, Body, UseGuards } from '@nestjs/common';
 import { InsuranceService } from './insurance.service';
 import { ClaimService } from './claim.service';
 import { ReinsuranceService } from './reinsurance.service';
 import { RiskType } from './enums/risk-type.enum';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RolesGuard } from './guards/roles.guard';
+import { Roles } from './decorators/roles.decorator';
+import { Role } from './enums/role.enum';
 
 @Controller('api/insurance')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class InsuranceController {
   constructor(
     private readonly insurance: InsuranceService,
@@ -12,22 +17,30 @@ export class InsuranceController {
     private readonly reinsurance: ReinsuranceService,
   ) {}
 
+  // Any authenticated user can purchase a policy
   @Post('purchase')
+  @Roles(Role.USER, Role.UNDERWRITER, Role.ADMIN)
   async purchase(@Body() body: { userId: string; poolId: string; riskType: RiskType; coverageAmount: number }) {
     return this.insurance.purchasePolicy(body.userId, body.poolId, body.riskType, body.coverageAmount);
   }
 
+  // Only underwriters and admins can assess claims
   @Post('claims/:claimId/assess')
+  @Roles(Role.UNDERWRITER, Role.ADMIN)
   async assessClaim(@Param('claimId') claimId: string) {
     return this.claims.assessClaim(claimId);
   }
 
+  // Only admins can trigger claim payouts
   @Post('claims/:claimId/pay')
+  @Roles(Role.ADMIN)
   async payClaim(@Param('claimId') claimId: string) {
     return this.claims.payClaim(claimId);
   }
 
+  // Only admins can create reinsurance contracts
   @Post('reinsurance')
+  @Roles(Role.ADMIN)
   async createReinsurance(@Body() body: { poolId: string; coverageLimit: number; premiumRate: number }) {
     return this.reinsurance.createContract(body.poolId, body.coverageLimit, body.premiumRate);
   }
