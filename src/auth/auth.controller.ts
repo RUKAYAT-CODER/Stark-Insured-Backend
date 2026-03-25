@@ -1,69 +1,84 @@
-import { Controller, Post, Body, Req, Ip, UseGuards, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Req,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Request } from 'express';
 import { AuthService } from './auth.service';
-import { AuditService } from '../audit/audit.service';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { LoginDto, RefreshTokenDto, TokenResponseDto } from './dto/auth.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { PrismaService } from '../prisma.service';
 
 @ApiTags('auth')
-@Controller('auth')
+@Controller('api/auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
-    private readonly audit: AuditService,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Post('login')
-  @ApiOperation({ summary: 'Login with wallet and signature' })
-  @ApiResponse({ status: 200, description: 'Login successful' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async login(@Body() body: { walletAddress: string; signature: string }, @Ip() ip: string) {
-    // Note: In decentralized apps, login normally involves verifying a signature of a nonce.
-    // We already have a NonceService generating nonces. A full implementation would check the signature here.
-    const user = await this.authService.validateUser(body.walletAddress, body.signature);
-    
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Authenticate with wallet signature and receive tokens' })
+  @ApiResponse({ status: 200, type: TokenResponseDto })
+  async login(@Body() dto: LoginDto, @Req() req: Request): Promise<TokenResponseDto> {
+    // Resolve or create user by wallet address
+    let user = await this.prisma.user.findUnique({
+      where: { walletAddress: dto.walletAddress },
+    });
+
     if (!user) {
-      // Log failed attempts as well, they are critical for security monitoring
-      await this.audit.logLogin('0.0.0.0', ip, false, `Failed login for wallet ${body.walletAddress}`);
-      throw new UnauthorizedException('Invalid credentials');
+      user = await this.prisma.user.create({
+        data: { walletAddress: dto.walletAddress },
+      });
     }
 
-    const loginResult = await this.authService.login(user);
-    
-    // Explicitly log the successful login as per task requirements
-    await this.audit.logLogin(user.id, ip, true);
-
-    return loginResult;
-  }
-
-  @Post('logout')
-  @ApiOperation({ summary: 'Logout and invalidate session' })
-  @ApiResponse({ status: 200, description: 'Logout successful' })
-  async logout(@Body() body: { userId: string }, @Ip() ip: string) {
-    // Normally you'd get the user from the JwtAuthGuard/Passport session
-    const userId = body.userId; 
-    
-    await this.authService.logout(userId);
-    
-    // Explicitly log the logout
-    await this.audit.logLogout(userId, ip);
-
-    return { success: true };
+    return this.authService.issueTokens(user.id, user.walletAddress, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
   }
 
   @Post('refresh')
-  @ApiOperation({ summary: 'Refresh access token using refresh token' })
-  @ApiResponse({ status: 200, description: 'Token refreshed' })
-  async refresh(@Body() body: { refreshToken: string }, @Ip() ip: string) {
-    try {
-      const result = await this.authService.refresh(body.refreshToken);
-      
-      // Explicitly log the token refresh as per task requirements
-      await this.audit.logTokenRefresh(result.userId, ip);
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Rotate refresh token and receive new token pair' })
+  @ApiResponse({ status: 200, type: TokenResponseDto })
+  async refresh(
+    @Body() dto: RefreshTokenDto,
+    @Req() req: Request,
+  ): Promise<TokenResponseDto> {
+    return this.authService.rotateRefreshToken(dto.refreshToken, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+  }
 
-      return result;
-    } catch (e) {
-      // Failed refresh might be an attempt to use a stolen/invalid token
-      await this.audit.log('token_refresh_failed', 'unknown', ip, { error: e.message });
-      throw e;
-    }
+  @Post('revoke')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Revoke a specific refresh token' })
+  @ApiResponse({ status: 204 })
+  async revoke(@Body() dto: RefreshTokenDto, @Req() req: Request): Promise<void> {
+    return this.authService.revokeToken(dto.refreshToken, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Logout and revoke all refresh tokens for the current user' })
+  @ApiResponse({ status: 204 })
+  async logout(@Req() req: Request & { user: { id: string } }): Promise<void> {
+    return this.authService.revokeAllUserTokens(req.user.id, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
   }
 }
