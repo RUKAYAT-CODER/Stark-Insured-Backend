@@ -12,6 +12,8 @@ import { IndexerModule } from './indexer/indexer.module';
 import { NotificationModule } from './notification/notification.module';
 import { GovernanceModule } from './governance/governance.module';
 import { InsuranceModule } from './insurance/insurance.module';
+import { AuditModule } from './audit/audit.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -33,6 +35,8 @@ import { InsuranceModule } from './insurance/insurance.module';
     NotificationModule,
     GovernanceModule,
     InsuranceModule,
+    AuditModule,
+    AuthModule,
   ],
   controllers: [AppController, UserController],
   providers: [AppService],

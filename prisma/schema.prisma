@@ -259,3 +259,17 @@ enum ProposalStatus {
   EXECUTED
   CANCELLED
 }
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   @map("action")
+  actorId   String?  @map("actor_id")
+  ip        String?  @map("ip")
+  metadata  Json?    @map("metadata")
+  timestamp DateTime @default(now()) @map("timestamp")
+
+  @@index([action])
+  @@index([actorId])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
