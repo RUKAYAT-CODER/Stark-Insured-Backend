@@ -13,6 +13,7 @@ import { GovernanceModule } from './governance/governance.module';
 import { InsuranceModule } from './insurance/insurance.module';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { UserModule } from './user/user.module';
     InsuranceModule,
     AuthModule,
     UserModule,
+    AnalyticsModule
   ],
   controllers: [AppController],
   providers: [AppService],

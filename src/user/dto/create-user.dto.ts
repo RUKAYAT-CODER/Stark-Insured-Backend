@@ -1,21 +1,30 @@
-import { IsString, MinLength, Matches, IsEmail, } from 'class-validator';
+import { IsString, IsEmail, IsOptional, IsNotEmpty } from 'class-validator';
 import { Trim, Escape } from 'class-sanitizer';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateUserDto {
+  @ApiProperty({
+    description: 'User wallet address',
+    example: '0x1234567890abcdef...'
+  })
   @IsString()
-  @MinLength(3)
+  @IsNotEmpty()
   @Trim()
-  @Escape()
-  username: string;
+  walletAddress: string;
 
+  @ApiPropertyOptional({
+    description: 'User email address',
+    example: 'user@example.com'
+  })
+  @IsOptional()
   @IsEmail()
   @Trim()
-  email: string;
+  email?: string;
 
-    @IsString()
-  @MinLength(8)
-  @Matches(/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).+$/, {
-    message: 'Password too weak. Must include uppercase, lowercase, number, and special character.',
+  @ApiPropertyOptional({
+    description: 'User profile data (JSON object)',
+    example: { name: 'John Doe', avatar: 'https://example.com/avatar.jpg' }
   })
-  password: string;
+  @IsOptional()
+  profileData?: any;
 }

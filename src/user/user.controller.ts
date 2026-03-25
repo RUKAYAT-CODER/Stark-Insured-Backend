@@ -1,25 +1,79 @@
-import { Controller, Get, Param, Post, Body, Put } from '@nestjs/common';
+import { Controller, Get, Param, Post, Body, Put, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetUserDto } from './dto/get-user.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UserResponseDto } from './dto/user-response.dto';
 import { UserService } from './user.service';
 
+@ApiTags('users')
+@ApiBearerAuth()
 @Controller('api/user')
+@UseGuards(JwtAuthGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get(':id')
-  async getUser(@Param() params: GetUserDto) {
+  @ApiOperation({ summary: 'Get user by ID' })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'User found successfully',
+    type: UserResponseDto 
+  })
+  @ApiResponse({ 
+    status: 404, 
+    description: 'User not found' 
+  })
+  @ApiResponse({ 
+    status: 401, 
+    description: 'Unauthorized - JWT token required' 
+  })
+  async getUser(@Param() params: GetUserDto): Promise<UserResponseDto> {
     return this.userService.getUserById(params.id);
   }
 
   @Post()
-  async createUser(@Body() dto: CreateUserDto) {
+  @ApiOperation({ summary: 'Create a new user' })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'User created successfully',
+    type: UserResponseDto 
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Bad request - invalid input data' 
+  })
+  @ApiResponse({ 
+    status: 401, 
+    description: 'Unauthorized - JWT token required' 
+  })
+  async createUser(@Body() dto: CreateUserDto): Promise<UserResponseDto> {
     return this.userService.createUser(dto);
   }
 
   @Put(':id')
-  async updateUser(@Param() params: GetUserDto, @Body() dto: UpdateUserDto) {
+  @ApiOperation({ summary: 'Update user by ID' })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'User updated successfully',
+    type: UserResponseDto 
+  })
+  @ApiResponse({ 
+    status: 404, 
+    description: 'User not found' 
+  })
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Bad request - invalid input data' 
+  })
+  @ApiResponse({ 
+    status: 401, 
+    description: 'Unauthorized - JWT token required' 
+  })
+  async updateUser(@Param() params: GetUserDto, @Body() dto: UpdateUserDto): Promise<UserResponseDto> {
     return this.userService.updateUser(params.id, dto);
   }
 }
