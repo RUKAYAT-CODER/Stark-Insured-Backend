@@ -3,7 +3,6 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppController } from './app.controller';
-import { UserController } from './user.controller';
 import { AppService } from './app.service';
 import { validateEnv } from './config/env.validation';
 import { ReputationModule } from './reputation/reputation.module';
@@ -13,6 +12,7 @@ import { NotificationModule } from './notification/notification.module';
 import { GovernanceModule } from './governance/governance.module';
 import { InsuranceModule } from './insurance/insurance.module';
 import { AuthModule } from './auth/auth.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -35,8 +35,9 @@ import { AuthModule } from './auth/auth.module';
     GovernanceModule,
     InsuranceModule,
     AuthModule,
+    UserModule,
   ],
-  controllers: [AppController, UserController],
+  controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}
