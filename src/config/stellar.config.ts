@@ -2,6 +2,7 @@ import { registerAs } from '@nestjs/config';
 
 export interface StellarNetworkConfig {
   network: string;
+  horizonUrl: string;
   rpcUrl: string;
   networkPassphrase: string;
   projectLaunchContractId: string;
@@ -22,9 +23,10 @@ export interface IndexerConfig {
 }
 
 export default registerAs('stellar', () => ({
-  network: process.env.STELLAR_NETWORK || 'testnet',
-  rpcUrl: process.env.STELLAR_RPC_URL || 'https://soroban-testnet.stellar.org',
-  networkPassphrase: process.env.STELLAR_NETWORK_PASSPHRASE || 'Test SDF Network ; September 2015',
+  network: process.env.STELLAR_NETWORK,
+  horizonUrl: process.env.STELLAR_HORIZON_URL,
+  rpcUrl: process.env.STELLAR_RPC_URL,
+  networkPassphrase: process.env.STELLAR_PASSPHRASE,
   projectLaunchContractId: process.env.PROJECT_LAUNCH_CONTRACT_ID || '',
   escrowContractId: process.env.ESCROW_CONTRACT_ID || '',
   profitDistributionContractId: process.env.PROFIT_DISTRIBUTION_CONTRACT_ID,
