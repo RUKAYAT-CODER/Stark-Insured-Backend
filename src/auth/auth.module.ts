@@ -2,27 +2,30 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-import { DatabaseModule } from '../database.module';
-import { AuditModule } from '../audit/audit.module';
+import { JwtStrategy } from './strategies/jwt.strategy';
+import { TokenCleanupTask } from './tasks/token-cleanup.task';
+import { PrismaService } from '../prisma.service';
 
 @Module({
   imports: [
-    DatabaseModule,
-    AuditModule,
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET', 'secret'),
-        signOptions: { expiresIn: '1h' },
-      }),
       inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.get<string>('JWT_SECRET'),
+        signOptions: {
+          expiresIn: config.get<number>('JWT_EXPIRATION'),
+        },
+      }),
     }),
+    ScheduleModule.forRoot(),
   ],
-  providers: [AuthService],
   controllers: [AuthController],
-  exports: [AuthService],
+  providers: [AuthService, JwtStrategy, TokenCleanupTask, PrismaService],
+  exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

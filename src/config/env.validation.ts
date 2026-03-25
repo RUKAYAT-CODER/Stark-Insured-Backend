@@ -1,4 +1,5 @@
 import { plainToInstance } from 'class-transformer';
+
 import {
   IsBoolean,
   IsEnum,
@@ -11,6 +12,7 @@ import {
   validateSync,
   Matches,
 } from 'class-validator';
+
 
 enum Environment {
   Development = 'development',
@@ -98,6 +100,10 @@ class EnvironmentVariables {
   @IsUrl()
   @IsOptional()
   STELLAR_RPC_URL: string = 'https://soroban-testnet.stellar.org';
+
+  @IsOptional()
+  @IsNumber()
+  REFRESH_TOKEN_TTL_DAYS: number = 30;
 
   @IsString()
   @IsOptional()

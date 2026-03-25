@@ -31,8 +31,44 @@ model User {
   notifications        Notification[]
   proposals            Proposal[]           @relation("ProposalCreator")
   votes                Vote[]               @relation("UserVotes")
+  refreshTokens        RefreshToken[]
+  tokenAuditLogs       TokenAuditLog[]
 
   @@map("users")
+}
+
+model RefreshToken {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique @map("token_hash")
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family     String // token family for rotation chain detection
+  isRevoked  Boolean  @default(false) @map("is_revoked")
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  replacedBy String?  @map("replaced_by") // tokenHash of the next token in chain
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+
+  @@index([userId])
+  @@index([family])
+  @@map("refresh_tokens")
+}
+
+model TokenAuditLog {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action      String // ISSUED, ROTATED, REVOKED, LOGOUT, REUSE_DETECTED
+  tokenFamily String?  @map("token_family")
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("token_audit_logs")
 }
 
 model Project {
