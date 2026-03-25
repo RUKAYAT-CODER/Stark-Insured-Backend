@@ -5,6 +5,7 @@ import { Repository, DataSource } from 'typeorm';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
 import { ClaimStatus } from './enums/claim-status.enum';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class ClaimService {
@@ -15,6 +16,7 @@ export class ClaimService {
     @InjectRepository(ClaimHistory) private readonly historyRepo: Repository<ClaimHistory>,
     private readonly eventEmitter: EventEmitter2,
     @InjectDataSource() private dataSource: DataSource,
+    private readonly audit: AuditService,
   ) {}
 
   async createHistory(claimId: string, status: ClaimStatus, reason?: string, actorId?: string) {
@@ -43,6 +45,14 @@ export class ClaimService {
         actorId,
       });
       await manager.save(history);
+
+      // Log to global audit trail for security tracking
+      await this.audit.log('claim_status_changed', actorId || 'system', '0.0.0.0', {
+        claimId,
+        oldStatus,
+        newStatus: status,
+        reason,
+      });
 
       this.eventEmitter.emit('claim.status_changed', {
         claimId,

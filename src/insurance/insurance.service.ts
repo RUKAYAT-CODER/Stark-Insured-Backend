@@ -8,6 +8,7 @@ import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
 import { RiskType } from './enums/risk-type.enum';
 import { PolicyStatus } from './enums/policy-status.enum';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class InsuranceService {
@@ -20,6 +21,7 @@ export class InsuranceService {
     @InjectRepository(PolicyHistory) private readonly historyRepo: Repository<PolicyHistory>,
     private readonly eventEmitter: EventEmitter2,
     @InjectDataSource() private dataSource: DataSource,
+    private readonly audit: AuditService,
   ) {}
 
   async createHistory(policyId: string, status: PolicyStatus, reason?: string, actorId?: string) {
@@ -32,7 +34,7 @@ export class InsuranceService {
     return this.historyRepo.save(history);
   }
 
-  async updateStatus(policyId: string, status: PolicyStatus, reason?: string, actorId?: string) {
+  async updateStatus(policyId: string, status: PolicyStatus, reason?: string, actorId?: string, ip?: string) {
     return this.dataSource.transaction(async (manager) => {
       const policy = await manager.findOne(InsurancePolicy, { where: { id: policyId } });
       if (!policy) throw new Error('Policy not found');
@@ -48,6 +50,13 @@ export class InsuranceService {
         actorId,
       });
       await manager.save(history);
+
+      // Log to global audit trail
+      await this.audit.logPolicyChange(actorId || 'system', ip || '0.0.0.0', policyId, {
+        oldStatus,
+        newStatus: status,
+        reason,
+      });
 
       this.eventEmitter.emit('policy.status_changed', {
         policyId,
@@ -79,6 +88,13 @@ export class InsuranceService {
     // Create initial history
     await this.createHistory(savedPolicy.id, PolicyStatus.PENDING, 'Policy created via purchase', userId);
     
+    // Log to global audit trail for security tracking
+    await this.audit.logPolicyChange(userId, '0.0.0.0', savedPolicy.id, {
+      action: 'purchase',
+      poolId,
+      coverageAmount,
+    });
+
     this.eventEmitter.emit('policy.created', { policyId: savedPolicy.id, userId });
 
     return savedPolicy;

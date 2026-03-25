@@ -11,9 +11,13 @@ import { IndexerModule } from './indexer/indexer.module';
 import { NotificationModule } from './notification/notification.module';
 import { GovernanceModule } from './governance/governance.module';
 import { InsuranceModule } from './insurance/insurance.module';
+
+
+
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+
 
 @Module({
   imports: [
@@ -35,9 +39,13 @@ import { AnalyticsModule } from './analytics/analytics.module';
     NotificationModule,
     GovernanceModule,
     InsuranceModule,
+
+    AuditModule,
+  
     AuthModule,
     UserModule,
     AnalyticsModule
+
   ],
   controllers: [AppController],
   providers: [AppService],

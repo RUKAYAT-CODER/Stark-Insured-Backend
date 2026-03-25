@@ -5,8 +5,7 @@ import { IndexerService } from './services/indexer.service';
 import { LedgerTrackerService } from './services/ledger-tracker.service';
 import { EventHandlerService } from './services/event-handler.service';
 import { DatabaseModule } from '../database.module';
-import { InsuranceModule } from '../insurance/insurance.module';
-import stellarConfig, { indexerConfig } from '../config/stellar.config';
+import { InsuranceModule } from '../insurance/insurance.module'; import stellarConfig, { indexerConfig } from '../config/stellar.config';
 
 /**
  * Blockchain Indexer Module
@@ -41,4 +40,4 @@ import stellarConfig, { indexerConfig } from '../config/stellar.config';
     EventHandlerService,
   ],
 })
-export class IndexerModule {}
+export class IndexerModule { }

@@ -3,16 +3,21 @@ import { PrismaService } from '../prisma.service';
 import { CreateProposalDto } from './dto/create-proposal.dto';
 import { VoteDto } from './dto/vote.dto';
 import { ProposalStatus } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class GovernanceService {
   private readonly logger = new Logger(GovernanceService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async createProposal(userId: string, createProposalDto: CreateProposalDto) {
     this.logger.log(`Creating new proposal by user ${userId}`);
-    return this.prisma.proposal.create({
+    
+    const proposal = await this.prisma.proposal.create({
       data: {
         title: createProposalDto.title,
         description: createProposalDto.description,
@@ -30,6 +35,14 @@ export class GovernanceService {
         },
       },
     });
+
+    // Log the security related governance action
+    await this.audit.log('proposal_created', userId, '0.0.0.0', {
+      proposalId: proposal.id,
+      title: proposal.title,
+    });
+
+    return proposal;
   }
 
   async findAllProposals() {
@@ -99,8 +112,8 @@ export class GovernanceService {
     }
 
     this.logger.log(`User ${userId} casting vote on proposal ${proposalId}`);
-
-    return this.prisma.vote.upsert({
+    
+    const vote = await this.prisma.vote.upsert({
       where: {
         proposalId_voterId: {
           proposalId,
@@ -116,6 +129,14 @@ export class GovernanceService {
         support: voteDto.support,
       },
     });
+
+    // Audit the vote action
+    await this.audit.log('vote_cast', userId, '0.0.0.0', {
+      proposalId,
+      support: voteDto.support,
+    });
+
+    return vote;
   }
 
   async getProposalResults(id: string) {
