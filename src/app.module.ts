@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppController } from './app.controller';
@@ -22,11 +22,14 @@ import { AuthModule } from './auth/auth.module';
       envFilePath: '.env',
       validate: validateEnv,
     }),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      url: process.env.DATABASE_URL,
-      autoLoadEntities: true,
-      synchronize: process.env.NODE_ENV !== 'production',
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        url: configService.get<string>('DATABASE_URL'),
+        autoLoadEntities: true,
+        synchronize: configService.get<string>('NODE_ENV') !== 'production',
+      }),
     }),
     EventEmitterModule.forRoot(),
     ReputationModule,
