@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body, Param, Request, HttpStatus, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Request, HttpStatus, HttpCode, UseGuards } from '@nestjs/common';
 import { GovernanceService } from './governance.service';
 import { CreateProposalDto } from './dto/create-proposal.dto';
 import { VoteDto } from './dto/vote.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { CsrfGuard } from '../csrf/csrf.guard';
 
 @ApiTags('governance')
 @Controller('governance')
@@ -10,6 +11,7 @@ export class GovernanceController {
   constructor(private readonly governanceService: GovernanceService) {}
 
   @Post('proposals')
+  @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Create a new proposal' })
   @ApiResponse({ status: 201, description: 'Proposal created successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -38,6 +40,7 @@ export class GovernanceController {
   }
 
   @Post('proposals/:id/vote')
+  @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Cast a vote on a proposal' })
   @ApiParam({ name: 'id', description: 'Proposal ID' })
   @ApiResponse({ status: 200, description: 'Vote cast successfully' })

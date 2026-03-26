@@ -13,6 +13,7 @@ import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LoginDto, RefreshTokenDto, TokenResponseDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { CsrfGuard } from '../csrf/csrf.guard';
 import { PrismaService } from '../prisma.service';
 
 @ApiTags('auth')
@@ -62,6 +63,7 @@ export class AuthController {
   }
 
   @Post('revoke')
+  @UseGuards(CsrfGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Revoke a specific refresh token' })
   @ApiResponse({ status: 204 })
@@ -73,7 +75,7 @@ export class AuthController {
   }
 
   @Post('logout')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, CsrfGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Logout and revoke all refresh tokens for the current user' })
