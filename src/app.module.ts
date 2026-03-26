@@ -17,6 +17,7 @@ import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { StorageModule } from './storage/storage.module';
 
 
 @Module({
@@ -48,6 +49,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     AuthModule,
     UserModule,
     AnalyticsModule,
+    StorageModule,
 
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
