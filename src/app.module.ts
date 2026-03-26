@@ -11,9 +11,9 @@ import { IndexerModule } from './indexer/indexer.module';
 import { NotificationModule } from './notification/notification.module';
 import { GovernanceModule } from './governance/governance.module';
 import { InsuranceModule } from './insurance/insurance.module';
-
-
-
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { AnalyticsModule } from './analytics/analytics.module';
@@ -47,10 +47,31 @@ import { AnalyticsModule } from './analytics/analytics.module';
   
     AuthModule,
     UserModule,
-    AnalyticsModule
+    AnalyticsModule,
 
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => [
+        {
+          name: 'default',
+          ttl: config.get<number>('THROTTLE_DEFAULT_TTL') || 900000,
+          limit: config.get<number>('THROTTLE_DEFAULT_LIMIT') || 100,
+        },
+        {
+          name: 'auth',
+          ttl: config.get<number>('THROTTLE_AUTH_TTL') || 900000,
+          limit: config.get<number>('THROTTLE_AUTH_LIMIT') || 5,
+        },
+      ],
+    }),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

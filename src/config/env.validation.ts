@@ -162,6 +162,29 @@ class EnvironmentVariables {
   @IsString()
   @IsOptional()
   VAPID_SUBJECT_EMAIL: string = 'admin@novafund.xyz';
+
+  // Rate Limiting - Global Throttler Configuration
+  @IsNumber()
+  @IsOptional()
+  THROTTLE_DEFAULT_TTL: number = 900000;
+
+  @IsNumber()
+  @IsOptional()
+  THROTTLE_DEFAULT_LIMIT: number = 100;
+
+  // Authentication endpoints
+  @IsNumber()
+  @IsOptional()
+  THROTTLE_AUTH_TTL: number = 900000;
+
+  @IsNumber()
+  @IsOptional()
+  THROTTLE_AUTH_LIMIT: number = 5;
+
+  // Rate Limiting - Redis
+  @IsBoolean()
+  @IsOptional()
+  RATE_LIMIT_REDIS_ENABLED: boolean = false;
 }
 
 export function validateEnv(config: Record<string, unknown>) {
