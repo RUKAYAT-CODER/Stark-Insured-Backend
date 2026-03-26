@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Request } from 'express';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LoginDto, RefreshTokenDto, TokenResponseDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -23,6 +24,7 @@ export class AuthController {
   ) {}
 
   @Post('login')
+  @Throttle({ auth: { limit: 5, ttl: 900000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Authenticate with wallet signature and receive tokens' })
   @ApiResponse({ status: 200, type: TokenResponseDto })
@@ -45,6 +47,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @Throttle({ auth: { limit: 5, ttl: 900000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Rotate refresh token and receive new token pair' })
   @ApiResponse({ status: 200, type: TokenResponseDto })
