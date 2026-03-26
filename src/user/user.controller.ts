@@ -2,6 +2,7 @@ import { Controller, Get, Param, Post, Body, Put, UseGuards, Request } from '@ne
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AccessGuard } from '../auth/access.guard';
+import { CsrfGuard } from '../csrf/csrf.guard';
 import { GetUserDto } from './dto/get-user.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -27,6 +28,7 @@ export class UserController {
   }
 
   @Post()
+  @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Create a new user' })
   @ApiResponse({ status: 201, description: 'User created successfully', type: UserResponseDto })
   @ApiResponse({ status: 400, description: 'Bad request - invalid input data' })
@@ -36,6 +38,7 @@ export class UserController {
   }
 
   @Put(':id')
+  @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Update user by ID' })
   @ApiParam({ name: 'id', description: 'User ID' })
   @ApiResponse({ status: 200, description: 'User updated successfully', type: UserResponseDto })
