@@ -8,20 +8,26 @@ export class AuditService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Logs a security-related action to the database and system logger.
-   * @param action The action being performed (e.g., 'login', 'logout', 'policy_change')
-   * @param actorId The ID of the user performing the action
-   * @param ip The IP address of the actor
-   * @param metadata Additional context for the action
+   * Generic audit logger for security and compliance events.
+   * Logs to system logger and persists to DB.
    */
-  async log(action: string, actorId?: string, ip?: string, metadata?: Record<string, any>) {
+  async log(
+    action: string,
+    actorId?: string,
+    ip?: string,
+    metadata?: Record<string, any>,
+  ) {
     const timestamp = new Date();
-    
-    try {
-      // Log to system logger for immediate monitoring
-      this.logger.log(`[AUDIT] Action: ${action} | Actor: ${actorId || 'system'} | IP: ${ip || 'unknown'} | Metadata: ${JSON.stringify(metadata || {})}`);
 
-      // Save to database for long-term audit trail and compliance
+    try {
+      // Immediate system log
+      this.logger.log(
+        `[AUDIT] Action=${action} | Actor=${actorId || 'system'} | IP=${ip || 'unknown'} | Metadata=${JSON.stringify(
+          metadata || {},
+        )}`,
+      );
+
+      // Persist to DB
       await this.prisma.auditLog.create({
         data: {
           action,
@@ -32,37 +38,40 @@ export class AuditService {
         },
       });
     } catch (error) {
-      // We don't want audit logging failures to crash the application,
-      // but they are critical so we must log the failure itself.
-      this.logger.error(`Critical: Audit logging failed for action ${action}: ${error.message}`, error.stack);
+      this.logger.error(
+        `Critical: Audit logging failed for action ${action}: ${error.message}`,
+        error.stack,
+      );
     }
   }
 
-  /**
-   * Specifically logs login attempts
-   */
+  /** Logs login attempts */
   async logLogin(userId: string, ip: string, success: boolean, failureReason?: string) {
     await this.log('login', userId, ip, { success, failureReason });
   }
 
-  /**
-   * Specifically logs logout actions
-   */
+  /** Logs logout actions */
   async logLogout(userId: string, ip: string) {
     await this.log('logout', userId, ip);
   }
 
-  /**
-   * Logs policy-related changes
-   */
+  /** Logs policy changes */
   async logPolicyChange(userId: string, ip: string, policyId: string, changeDetails: Record<string, any>) {
     await this.log('policy_change', userId, ip, { policyId, ...changeDetails });
   }
 
-  /**
-   * Logs token refresh operations
-   */
+  /** Logs token refresh */
   async logTokenRefresh(userId: string, ip: string) {
     await this.log('token_refresh', userId, ip);
+  }
+
+  /** Logs unauthorized access attempts */
+  async logUnauthorizedAccess(actorId: string, targetId: string, ip?: string) {
+    await this.log('unauthorized_access', actorId, ip, { targetId });
+  }
+
+  /** Logs data access events (read/write) */
+  async logDataAccess(actorId: string, resource: string, operation: string, ip?: string) {
+    await this.log('data_access', actorId, ip, { resource, operation });
   }
 }
