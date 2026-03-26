@@ -35,8 +35,27 @@ async function bootstrap() {
   const apiPrefix = configService.get<string>('API_PREFIX', 'api/v1');
   app.setGlobalPrefix(apiPrefix);
 
-  // CORS
-  app.enableCors();
+  // Strict CORS Configuration
+  const isProduction = configService.get<string>('NODE_ENV') === 'production';
+  const corsOrigin = configService.get<string>('CORS_ORIGIN');
+  const corsCredentials = configService.get<boolean>('CORS_CREDENTIALS', false);
+  
+  // Parse allowed origins - support comma-separated list for multiple origins
+  const allowedOrigins = corsOrigin ? corsOrigin.split(',').map(origin => origin.trim()) : [];
+  
+  // In production, require explicit origins. In development, allow localhost with fallback.
+  const origins = isProduction 
+    ? (allowedOrigins.length > 0 ? allowedOrigins : [])
+    : (allowedOrigins.length > 0 ? allowedOrigins : ['http://localhost:3000', 'http://localhost:3001']);
+
+  app.enableCors({
+    origin: origins,
+    credentials: corsCredentials,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token'],
+    exposedHeaders: ['X-Total-Count', 'X-CSRF-Token'],
+    maxAge: 86400, // 24 hours
+  });
 
   const port = configService.get<number>('PORT', 3000);
   await app.listen(port);
