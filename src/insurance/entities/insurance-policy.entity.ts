@@ -25,6 +25,9 @@ export class InsurancePolicy {
   @Column()
   poolId: string;
 
+  @Column({ type: 'timestamptz', nullable: true })
+  expiresAt: Date | null;
+
   @CreateDateColumn()
   createdAt: Date;
 }

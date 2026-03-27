@@ -1,9 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { Claim } from './entities/claim.entity';
 import { ClaimHistory } from './entities/claim-history.entity';
+import { InsurancePolicy } from './entities/insurance-policy.entity';
 import { Repository, DataSource } from 'typeorm';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
 import { ClaimStatus } from './enums/claim-status.enum';
+import { PolicyStatus } from './enums/policy-status.enum';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AuditService } from '../audit/audit.service';
 
@@ -14,6 +16,7 @@ export class ClaimService {
   constructor(
     @InjectRepository(Claim) private readonly repo: Repository<Claim>,
     @InjectRepository(ClaimHistory) private readonly historyRepo: Repository<ClaimHistory>,
+    @InjectRepository(InsurancePolicy) private readonly policyRepo: Repository<InsurancePolicy>,
     private readonly eventEmitter: EventEmitter2,
     @InjectDataSource() private dataSource: DataSource,
     private readonly audit: AuditService,
@@ -67,6 +70,28 @@ export class ClaimService {
   }
 
   async assessClaim(claimId: string): Promise<Claim> {
+    const claim = await this.repo.findOne({ where: { id: claimId } });
+    if (!claim) {
+      throw new NotFoundException('Claim not found');
+    }
+
+    const policy = await this.policyRepo.findOne({ where: { id: claim.policyId } });
+    if (!policy) {
+      throw new NotFoundException('Associated policy not found');
+    }
+
+    if (policy.status !== PolicyStatus.ACTIVE) {
+      throw new BadRequestException('Claims can only be assessed against active policies');
+    }
+
+    if (policy.expiresAt && policy.expiresAt < new Date()) {
+      throw new BadRequestException('Policy has expired');
+    }
+
+    if (Number(claim.claimAmount) > Number(policy.coverageAmount)) {
+      throw new BadRequestException('Claim amount exceeds policy coverage amount');
+    }
+
     return this.updateStatus(claimId, ClaimStatus.APPROVED, 'Automated assessment approved', 'system');
   }
 
