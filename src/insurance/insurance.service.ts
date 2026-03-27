@@ -74,56 +74,77 @@ export class InsuranceService {
     });
   }
 
-  async purchasePolicy(userId: string, poolId: string, riskType: RiskType, coverageAmount: number) {
+  async purchasePolicy(
+    userId: string,
+    poolId: string,
+    riskType: RiskType,
+    coverageAmount: number,
+  ) {
     if (coverageAmount <= 0) {
       throw new BadRequestException('Coverage amount must be greater than zero');
     }
 
-    const pool = await this.poolRepo.findOne({ where: { id: poolId } });
-    if (!pool) {
-      throw new NotFoundException('Insurance pool not found');
-    }
+    return await this.dataSource.transaction(async (manager) => {
+      const pool = await manager.findOne(InsurancePool, {
+        where: { id: poolId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      
+      if (!pool) {
+        throw new NotFoundException('Insurance pool not found');
+      }
 
-    const availableCapital = Number(pool.capital) - Number(pool.lockedCapital);
-    if (coverageAmount > availableCapital) {
-      throw new BadRequestException('Coverage amount exceeds pool available capital');
-    }
+      const availableCapital = Number(pool.capital) - Number(pool.lockedCapital);
+      if (coverageAmount > availableCapital) {
+        throw new BadRequestException('Coverage amount exceeds pool available capital');
+      }
 
-    const reinsuranceContract = await this.reinsuranceRepo.findOne({ where: { poolId } });
-    if (reinsuranceContract && coverageAmount > Number(reinsuranceContract.coverageLimit)) {
-      throw new BadRequestException('Coverage amount exceeds reinsurance contract limit');
-    }
+      const reinsuranceContract = await manager.findOne(ReinsuranceContract, {
+        where: { poolId },
+      });
+      
+      if (
+        reinsuranceContract &&
+        coverageAmount > Number(reinsuranceContract.coverageLimit)
+      ) {
+        throw new BadRequestException(
+          'Coverage amount exceeds reinsurance contract limit',
+        );
+      }
 
-    const expiresAt = new Date();
-    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+      const expiresAt = new Date();
+      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
 
-    const premium = this.pricing.calculatePremium(riskType, coverageAmount);
-    await this.pools.lockCapital(poolId, coverageAmount);
+      const premium = this.pricing.calculatePremium(riskType, coverageAmount);
+      
+      // Lock capital atomically with optimistic locking
+      await this.pools.lockCapital(poolId, coverageAmount);
 
-    const policy = this.repo.create({
-      userId,
-      poolId,
-      riskType,
-      coverageAmount,
-      premium,
-      status: PolicyStatus.PENDING,
-      expiresAt,
+      const policy = this.repo.create({
+        userId,
+        poolId,
+        riskType,
+        coverageAmount,
+        premium,
+        status: PolicyStatus.PENDING,
+        expiresAt,
+      });
+
+      const savedPolicy = await manager.save(policy);
+
+      // Create initial history
+      await this.createHistory(savedPolicy.id, PolicyStatus.PENDING, 'Policy created via purchase', userId);
+
+      // Log to global audit trail for security tracking
+      await this.audit.logPolicyChange(userId, '0.0.0.0', savedPolicy.id, {
+        action: 'purchase',
+        poolId,
+        coverageAmount,
+      });
+
+      this.eventEmitter.emit('policy.created', { policyId: savedPolicy.id, userId });
+
+      return savedPolicy;
     });
-    
-    const savedPolicy = await this.repo.save(policy);
-    
-    // Create initial history
-    await this.createHistory(savedPolicy.id, PolicyStatus.PENDING, 'Policy created via purchase', userId);
-    
-    // Log to global audit trail for security tracking
-    await this.audit.logPolicyChange(userId, '0.0.0.0', savedPolicy.id, {
-      action: 'purchase',
-      poolId,
-      coverageAmount,
-    });
-
-    this.eventEmitter.emit('policy.created', { policyId: savedPolicy.id, userId });
-
-    return savedPolicy;
   }
 }
