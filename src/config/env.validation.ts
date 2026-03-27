@@ -103,7 +103,7 @@ class EnvironmentVariables {
 
   @IsOptional()
   @IsNumber()
-  REFRESH_TOKEN_TTL_DAYS: number = 30;
+  REFRESH_TOKEN_TTL_DAYS: number = 7;
 
   @IsString()
   @IsOptional()
@@ -121,7 +121,11 @@ class EnvironmentVariables {
 
   @IsString()
   @IsOptional()
-  JWT_EXPIRES_IN: string = '24h';
+  JWT_EXPIRES_IN: string = '15m';
+
+  @IsNumber()
+  @IsOptional()
+  JWT_EXPIRATION: number = 900;
 
   @IsNumber()
   @IsOptional()

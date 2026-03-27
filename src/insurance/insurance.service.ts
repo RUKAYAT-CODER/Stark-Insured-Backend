@@ -1,7 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PricingService } from './pricing.service';
 import { PoolService } from './pool.service';
 import { InsurancePolicy } from './entities/insurance-policy.entity';
+import { InsurancePool } from './entities/insurance-pool.entity';
+import { ReinsuranceContract } from './entities/reinsurance-contract.entity';
 import { PolicyHistory } from './entities/policy-history.entity';
 import { Repository, DataSource } from 'typeorm';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
@@ -18,6 +20,8 @@ export class InsuranceService {
     private readonly pricing: PricingService,
     private readonly pools: PoolService,
     @InjectRepository(InsurancePolicy) private readonly repo: Repository<InsurancePolicy>,
+    @InjectRepository(InsurancePool) private readonly poolRepo: Repository<InsurancePool>,
+    @InjectRepository(ReinsuranceContract) private readonly reinsuranceRepo: Repository<ReinsuranceContract>,
     @InjectRepository(PolicyHistory) private readonly historyRepo: Repository<PolicyHistory>,
     private readonly eventEmitter: EventEmitter2,
     @InjectDataSource() private dataSource: DataSource,
@@ -71,16 +75,39 @@ export class InsuranceService {
   }
 
   async purchasePolicy(userId: string, poolId: string, riskType: RiskType, coverageAmount: number) {
+    if (coverageAmount <= 0) {
+      throw new BadRequestException('Coverage amount must be greater than zero');
+    }
+
+    const pool = await this.poolRepo.findOne({ where: { id: poolId } });
+    if (!pool) {
+      throw new NotFoundException('Insurance pool not found');
+    }
+
+    const availableCapital = Number(pool.capital) - Number(pool.lockedCapital);
+    if (coverageAmount > availableCapital) {
+      throw new BadRequestException('Coverage amount exceeds pool available capital');
+    }
+
+    const reinsuranceContract = await this.reinsuranceRepo.findOne({ where: { poolId } });
+    if (reinsuranceContract && coverageAmount > Number(reinsuranceContract.coverageLimit)) {
+      throw new BadRequestException('Coverage amount exceeds reinsurance contract limit');
+    }
+
+    const expiresAt = new Date();
+    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+
     const premium = this.pricing.calculatePremium(riskType, coverageAmount);
     await this.pools.lockCapital(poolId, coverageAmount);
 
-    const policy = this.repo.create({ 
-      userId, 
-      poolId, 
-      riskType, 
-      coverageAmount, 
+    const policy = this.repo.create({
+      userId,
+      poolId,
+      riskType,
+      coverageAmount,
       premium,
-      status: PolicyStatus.PENDING 
+      status: PolicyStatus.PENDING,
+      expiresAt,
     });
     
     const savedPolicy = await this.repo.save(policy);
