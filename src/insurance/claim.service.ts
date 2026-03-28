@@ -22,6 +22,41 @@ export class ClaimService {
     private readonly audit: AuditService,
   ) {}
 
+  async createClaim(policyId: string, claimAmount: number, userId: string): Promise<Claim> {
+    const policy = await this.policyRepo.findOne({ where: { id: policyId, userId } });
+    if (!policy) {
+      throw new NotFoundException('Policy not found or unauthorized');
+    }
+
+    if (policy.status !== PolicyStatus.ACTIVE) {
+      throw new BadRequestException('Claims can only be filed against active policies');
+    }
+
+    if (claimAmount > Number(policy.coverageAmount)) {
+      throw new BadRequestException('Claim amount exceeds policy coverage');
+    }
+
+    const claim = this.repo.create({
+      policyId,
+      claimAmount,
+      status: ClaimStatus.PENDING,
+    });
+
+    const savedClaim = await this.repo.save(claim);
+
+    await this.createHistory(savedClaim.id, ClaimStatus.PENDING, 'Claim filed by user', userId);
+
+    await this.audit.log('claim_created', userId, '0.0.0.0', {
+      claimId: savedClaim.id,
+      policyId,
+      claimAmount,
+    });
+
+    this.eventEmitter.emit('claim.created', { claimId: savedClaim.id, userId });
+
+    return savedClaim;
+  }
+
   async createHistory(claimId: string, status: ClaimStatus, reason?: string, actorId?: string) {
     const history = this.historyRepo.create({
       claimId,
