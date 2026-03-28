@@ -19,7 +19,7 @@ import { UserModule } from './user/user.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { StorageModule } from './storage/storage.module';
 import { CsrfModule } from './csrf/csrf.module';
-
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -52,6 +52,7 @@ import { CsrfModule } from './csrf/csrf.module';
     AnalyticsModule,
     StorageModule,
     CsrfModule,
+    HealthModule,
 
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
