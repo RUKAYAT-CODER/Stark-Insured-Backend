@@ -26,6 +26,14 @@ export class InsuranceController {
     return this.insurance.purchasePolicy(body.userId, body.poolId, body.riskType, body.coverageAmount);
   }
 
+  // Users can file claims against their policies
+  @Post('claims')
+  @UseGuards(CsrfGuard)
+  @Roles(Role.USER, Role.UNDERWRITER, Role.ADMIN)
+  async fileClaim(@Body() body: { policyId: string; claimAmount: number; userId: string }) {
+    return this.claims.createClaim(body.policyId, body.claimAmount, body.userId);
+  }
+
   // Only underwriters and admins can assess claims
   @Post('claims/:claimId/assess')
   @UseGuards(CsrfGuard)
