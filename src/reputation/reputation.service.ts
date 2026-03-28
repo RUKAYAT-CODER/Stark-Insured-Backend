@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { calculateTrustScore } from './calculators/trust-score.calculator';
-import { Prisma } from '@prisma/client';
+import {
+	PrismaClientKnownRequestError,
+	PrismaClientInitializationError,
+} from '@prisma/client/runtime/library';
 
 // Maximum number of retry attempts for transient errors
 const MAX_RETRIES = 3;
@@ -74,7 +77,7 @@ export class ReputationService {
 	 * Checks if an error is retryable (transient database errors)
 	 */
 	private isRetryableError(error: unknown): boolean {
-		if (error instanceof Prisma.PrismaClientKnownRequestError) {
+		if (error instanceof PrismaClientKnownRequestError) {
 			// P2024: Timed out fetching a new connection from the connection pool
 			// P2034: Transaction failed due to a write conflict or a deadlock
 			// P2020: Value out of range for the column
@@ -85,7 +88,7 @@ export class ReputationService {
 		}
 
 		// Retry on connection errors
-		if (error instanceof Prisma.PrismaClientInitializationError) {
+		if (error instanceof PrismaClientInitializationError) {
 			return true;
 		}
 
