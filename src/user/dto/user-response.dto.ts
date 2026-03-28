@@ -14,15 +14,16 @@ export class UserResponseDto {
   walletAddress: string;
 
   @ApiProperty({
-    description: 'User email address',
+    description: 'User email address (decrypted from storage)',
     example: 'user@example.com',
     required: false
   })
   email?: string;
 
   @ApiProperty({
-    description: 'User profile data',
-    required: false
+    description: 'User profile data (decrypted from storage)',
+    required: false,
+    example: { name: 'John Doe', avatar: 'https://example.com/avatar.jpg' }
   })
   profileData?: any;
 
