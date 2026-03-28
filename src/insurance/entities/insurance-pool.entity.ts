@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, VersionColumn } from 'typeorm';
 
 @Entity('insurance_pools')
 export class InsurancePool {
@@ -13,6 +13,9 @@ export class InsurancePool {
 
   @Column('decimal')
   lockedCapital: number;
+
+  @VersionColumn()
+  version: number;
 
   @CreateDateColumn()
   createdAt: Date;
