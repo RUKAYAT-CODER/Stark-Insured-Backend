@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Body, Put, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Param, Post, Body, Put, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AccessGuard } from '../auth/access.guard';
@@ -23,8 +23,8 @@ export class UserController {
   @ApiResponse({ status: 404, description: 'User not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
   @ApiResponse({ status: 403, description: 'Forbidden - principal mismatch' })
-  async getUser(@Param() params: GetUserDto, @Request() req: any): Promise<UserResponseDto> {
-    return this.userService.getUserById(params.id, req.user.id);
+  async getUser(@Param() params: GetUserDto): Promise<UserResponseDto> {
+    return this.userService.getUserById(params.id);
   }
 
   @Post()
@@ -33,8 +33,8 @@ export class UserController {
   @ApiResponse({ status: 201, description: 'User created successfully', type: UserResponseDto })
   @ApiResponse({ status: 400, description: 'Bad request - invalid input data' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
-  async createUser(@Body() dto: CreateUserDto, @Request() req: any): Promise<UserResponseDto> {
-    return this.userService.createUser(dto, req.user.id);
+  async createUser(@Body() dto: CreateUserDto): Promise<UserResponseDto> {
+    return this.userService.createUser(dto);
   }
 
   @Put(':id')
@@ -46,7 +46,7 @@ export class UserController {
   @ApiResponse({ status: 400, description: 'Bad request - invalid input data' })
   @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
   @ApiResponse({ status: 403, description: 'Forbidden - principal mismatch' })
-  async updateUser(@Param() params: GetUserDto, @Body() dto: UpdateUserDto, @Request() req: any): Promise<UserResponseDto> {
-    return this.userService.updateUser(params.id, req.user.id, dto);
+  async updateUser(@Param() params: GetUserDto, @Body() dto: UpdateUserDto): Promise<UserResponseDto> {
+    return this.userService.updateUser(params.id, dto);
   }
 }
