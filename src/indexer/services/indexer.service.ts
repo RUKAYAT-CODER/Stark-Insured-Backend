@@ -326,6 +326,12 @@ export class IndexerService implements OnModuleInit, OnModuleDestroy {
       return false;
     }
 
+    // Only process events from successful contract calls
+    if (!event.inSuccessfulContractCall) {
+      this.logger.warn(`Skipping event ${event.id}: not from a successful contract call`);
+      return false;
+    }
+
     // Parse event
     const parsedEvent = this.parseEvent(event);
     if (!parsedEvent) {

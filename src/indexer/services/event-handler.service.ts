@@ -1,20 +1,34 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { validateSync } from 'class-validator';
+import { plainToInstance } from 'class-transformer';
 import { PrismaService } from '../../prisma.service';
 import { InsuranceService } from '../../insurance/insurance.service';
 import { ClaimService } from '../../insurance/claim.service';
 import { ClaimStatus } from '../../insurance/enums/claim-status.enum';
+import { ParsedContractEvent, ContractEventType } from '../types/event-types';
 import {
-  ParsedContractEvent,
-  ContractEventType,
-  ProjectCreatedEvent,
-  ContributionMadeEvent,
-  MilestoneApprovedEvent,
-  FundsReleasedEvent,
-  ProjectStatusEvent,
-} from '../types/event-types';
+  ProjectCreatedDataDto,
+  ContributionMadeDataDto,
+  MilestoneApprovedDataDto,
+  MilestoneRejectedDataDto,
+  FundsReleasedDataDto,
+  ProjectStatusDataDto,
+  PolicyCreatedDataDto,
+  ClaimSubmittedDataDto,
+} from '../dto/contract-event.dto';
 import { IEventHandler, IEventHandlerRegistry } from '../interfaces/event-handler.interface';
 import { NotificationService } from '../../notification/services/notification.service';
 import { ReputationService } from '../../reputation/reputation.service';
+
+/**
+ * Validates event.data against a DTO class using class-validator.
+ * Strips unknown properties (whitelist) before validation.
+ */
+function validatePayload<T extends object>(data: unknown, DtoClass: new () => T): boolean {
+  const instance = plainToInstance(DtoClass, data);
+  const errors = validateSync(instance as object, { whitelist: true });
+  return errors.length === 0;
+}
 
 /**
  * Handler for PROJECT_CREATED events
@@ -26,18 +40,11 @@ class ProjectCreatedHandler implements IEventHandler {
   constructor(private readonly prisma: PrismaService) { }
 
   validate(event: ParsedContractEvent): boolean {
-    const data = event.data as unknown as ProjectCreatedEvent;
-    return !!(
-      data.projectId !== undefined &&
-      data.creator &&
-      data.fundingGoal &&
-      data.deadline &&
-      data.token
-    );
+    return validatePayload(event.data, ProjectCreatedDataDto);
   }
 
   async handle(event: ParsedContractEvent): Promise<void> {
-    const data = event.data as unknown as ProjectCreatedEvent;
+    const data = plainToInstance(ProjectCreatedDataDto, event.data);
     this.logger.log(`Processing PROJECT_CREATED: Project ${data.projectId} by ${data.creator}`);
 
     const user = await this.prisma.user.upsert({
@@ -83,12 +90,11 @@ class ContributionMadeHandler implements IEventHandler {
   ) { }
 
   validate(event: ParsedContractEvent): boolean {
-    const data = event.data as unknown as ContributionMadeEvent;
-    return !!(data.projectId !== undefined && data.contributor && data.amount);
+    return validatePayload(event.data, ContributionMadeDataDto);
   }
 
   async handle(event: ParsedContractEvent): Promise<void> {
-    const data = event.data as unknown as ContributionMadeEvent;
+    const data = plainToInstance(ContributionMadeDataDto, event.data);
     this.logger.log(`Processing CONTRIBUTION_MADE: ${data.amount} to project ${data.projectId}`);
 
     const user = await this.prisma.user.upsert({
@@ -151,12 +157,11 @@ class MilestoneApprovedHandler implements IEventHandler {
   ) { }
 
   validate(event: ParsedContractEvent): boolean {
-    const data = event.data as unknown as MilestoneApprovedEvent;
-    return !!(data.projectId !== undefined && data.milestoneId !== undefined);
+    return validatePayload(event.data, MilestoneApprovedDataDto);
   }
 
   async handle(event: ParsedContractEvent): Promise<void> {
-    const data = event.data as unknown as MilestoneApprovedEvent;
+    const data = plainToInstance(MilestoneApprovedDataDto, event.data);
     const project = await this.prisma.project.findUnique({
       where: { contractId: data.projectId.toString() },
     });
@@ -203,12 +208,11 @@ class MilestoneRejectedHandler implements IEventHandler {
   ) {}
 
   validate(event: ParsedContractEvent): boolean {
-    const data = event.data as any;
-    return !!(data.projectId !== undefined && data.milestoneId !== undefined);
+    return validatePayload(event.data, MilestoneRejectedDataDto);
   }
 
   async handle(event: ParsedContractEvent): Promise<void> {
-    const data = event.data as any;
+    const data = plainToInstance(MilestoneRejectedDataDto, event.data);
     const project = await this.prisma.project.findUnique({
       where: { contractId: data.projectId.toString() },
     });
@@ -233,12 +237,11 @@ class FundsReleasedHandler implements IEventHandler {
   constructor(private readonly prisma: PrismaService) { }
 
   validate(event: ParsedContractEvent): boolean {
-    const data = event.data as unknown as FundsReleasedEvent;
-    return !!(data.projectId !== undefined && data.amount);
+    return validatePayload(event.data, FundsReleasedDataDto);
   }
 
   async handle(event: ParsedContractEvent): Promise<void> {
-    const data = event.data as unknown as FundsReleasedEvent;
+    const data = plainToInstance(FundsReleasedDataDto, event.data);
     const project = await this.prisma.project.findUnique({
       where: { contractId: data.projectId.toString() },
     });
@@ -259,12 +262,11 @@ class ProjectCompletedHandler implements IEventHandler {
   constructor(private readonly prisma: PrismaService) { }
 
   validate(event: ParsedContractEvent): boolean {
-    const data = event.data as unknown as ProjectStatusEvent;
-    return data.projectId !== undefined;
+    return validatePayload(event.data, ProjectStatusDataDto);
   }
 
   async handle(event: ParsedContractEvent): Promise<void> {
-    const data = event.data as unknown as ProjectStatusEvent;
+    const data = plainToInstance(ProjectStatusDataDto, event.data);
     await this.prisma.project.updateMany({
       where: { contractId: data.projectId.toString() },
       data: { status: 'COMPLETED' },
@@ -279,12 +281,11 @@ class ProjectFailedHandler implements IEventHandler {
   constructor(private readonly prisma: PrismaService) { }
 
   validate(event: ParsedContractEvent): boolean {
-    const data = event.data as unknown as ProjectStatusEvent;
-    return data.projectId !== undefined;
+    return validatePayload(event.data, ProjectStatusDataDto);
   }
 
   async handle(event: ParsedContractEvent): Promise<void> {
-    const data = event.data as unknown as ProjectStatusEvent;
+    const data = plainToInstance(ProjectStatusDataDto, event.data);
     await this.prisma.project.updateMany({
       where: { contractId: data.projectId.toString() },
       data: { status: 'CANCELLED' },
@@ -302,17 +303,16 @@ class PolicyCreatedHandler implements IEventHandler {
   constructor(private readonly insuranceService: InsuranceService) {}
 
   validate(event: ParsedContractEvent): boolean {
-    const data = event.data as any;
-    return !!(data.userId && data.poolId && data.coverageAmount);
+    return validatePayload(event.data, PolicyCreatedDataDto);
   }
 
   async handle(event: ParsedContractEvent): Promise<void> {
-    const data = event.data as any;
+    const data = plainToInstance(PolicyCreatedDataDto, event.data);
     this.logger.log(`Processing POLICY_CREATED for user ${data.userId}`);
     await this.insuranceService.purchasePolicy(
       data.userId,
       data.poolId,
-      data.riskType || 'general',
+      data.riskType ?? 'general',
       Number(data.coverageAmount)
     );
   }
@@ -325,12 +325,11 @@ class ClaimSubmittedHandler implements IEventHandler {
   constructor(private readonly claimService: ClaimService) {}
 
   validate(event: ParsedContractEvent): boolean {
-    const data = event.data as any;
-    return !!(data.claimId && data.policyId && data.amount);
+    return validatePayload(event.data, ClaimSubmittedDataDto);
   }
 
   async handle(event: ParsedContractEvent): Promise<void> {
-    const data = event.data as any;
+    const data = plainToInstance(ClaimSubmittedDataDto, event.data);
     this.logger.log(`Processing CLAIM_SUBMITTED for policy ${data.policyId}`);
     await this.claimService.createHistory(
       data.claimId,
