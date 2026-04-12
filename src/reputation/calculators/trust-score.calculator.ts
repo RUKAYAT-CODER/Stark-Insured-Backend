@@ -3,10 +3,7 @@
 
 import { PrismaClient } from '@prisma/client';
 
-// Allow both PrismaClient and Prisma transaction client for transaction support
-type PrismaClientOrTransaction = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
-
-export async function calculateTrustScore(prisma: PrismaClientOrTransaction, creatorId: string): Promise<number> {
+export async function calculateTrustScore(prisma: PrismaClient, creatorId: string): Promise<number> {
   // 1. Number of successful projects
   const successfulProjects = await prisma.project.count({
     where: { creatorId, status: 'COMPLETED' },
