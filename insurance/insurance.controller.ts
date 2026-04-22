@@ -2,7 +2,8 @@ import { Controller, Post, Get, Param, Body } from '@nestjs/common';
 import { InsuranceService } from './insurance.service';
 import { ClaimService } from './claim.service';
 import { ReinsuranceService } from './reinsurance.service';
-import { RiskType } from './enums/risk-type.enum';
+import { PurchasePolicyDto } from './dto/purchase-policy.dto';
+import { CreateReinsuranceDto } from './dto/create-reinsurance.dto';
 
 @Controller('api/insurance')
 export class InsuranceController {
@@ -13,7 +14,7 @@ export class InsuranceController {
   ) {}
 
   @Post('purchase')
-  async purchase(@Body() body: { userId: string; poolId: string; riskType: RiskType; coverageAmount: number }) {
+  async purchase(@Body() body: PurchasePolicyDto) {
     return this.insurance.purchasePolicy(body.userId, body.poolId, body.riskType, body.coverageAmount);
   }
 
@@ -28,7 +29,7 @@ export class InsuranceController {
   }
 
   @Post('reinsurance')
-  async createReinsurance(@Body() body: { poolId: string; coverageLimit: number; premiumRate: number }) {
+  async createReinsurance(@Body() body: CreateReinsuranceDto) {
     return this.reinsurance.createContract(body.poolId, body.coverageLimit, body.premiumRate);
   }
 }
