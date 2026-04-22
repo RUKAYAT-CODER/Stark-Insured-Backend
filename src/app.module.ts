@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { TerminusModule } from '@nestjs/terminus';
+import { HttpModule } from '@nestjs/axios';
 import { AppController } from './app.controller';
 import { UserController } from './user.controller';
 import { AppService } from './app.service';
@@ -19,6 +21,8 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
       envFilePath: '.env',
       validate: validateEnv,
     }),
+    TerminusModule,
+    HttpModule,
     AuthModule,
     ReputationModule,
     DatabaseModule,

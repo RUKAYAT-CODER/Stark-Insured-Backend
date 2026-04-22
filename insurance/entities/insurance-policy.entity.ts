@@ -1,5 +1,15 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  OneToMany,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { RiskType } from '../enums/risk-type.enum';
+import { Claim } from './claim.entity';
+import { ReinsuranceContract } from './reinsurance-contract.entity';
 
 @Entity('insurance_policies')
 export class InsurancePolicy {
@@ -20,6 +30,16 @@ export class InsurancePolicy {
 
   @Column()
   poolId: string;
+
+  @ManyToOne(() => ReinsuranceContract, (contract) => contract.policies, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'poolId' })
+  pool: ReinsuranceContract;
+
+  @OneToMany(() => Claim, (claim) => claim.policy)
+  claims: Claim[];
 
   @CreateDateColumn()
   createdAt: Date;

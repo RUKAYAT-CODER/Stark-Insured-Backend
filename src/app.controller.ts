@@ -1,10 +1,23 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
+import {
+  HealthCheck,
+  HealthCheckService,
+  HttpHealthIndicator,
+  TypeOrmHealthIndicator,
+} from '@nestjs/terminus';
+import { ConfigService } from '@nestjs/config';
 import { Public } from './auth/decorators/public.decorator';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    private readonly appService: AppService,
+    private readonly health: HealthCheckService,
+    private readonly http: HttpHealthIndicator,
+    private readonly db: TypeOrmHealthIndicator,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Public()
   @Get()
@@ -14,10 +27,16 @@ export class AppController {
 
   @Public()
   @Get('health')
+  @HealthCheck()
   getHealth() {
-    return {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-    };
+    const stellarRpcUrl = this.configService.get<string>(
+      'STELLAR_HORIZON_URL',
+      'https://horizon-testnet.stellar.org',
+    );
+
+    return this.health.check([
+      () => this.db.pingCheck('database'),
+      () => this.http.pingCheck('stellar-rpc', stellarRpcUrl),
+    ]);
   }
 }
