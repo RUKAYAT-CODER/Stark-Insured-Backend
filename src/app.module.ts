@@ -8,6 +8,9 @@ import { ReputationModule } from './reputation/reputation.module';
 import { DatabaseModule } from './database.module';
 import { IndexerModule } from './indexer/indexer.module';
 import { NotificationModule } from './notification/notification.module';
+import { AuthModule } from './auth/auth.module';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -16,12 +19,19 @@ import { NotificationModule } from './notification/notification.module';
       envFilePath: '.env',
       validate: validateEnv,
     }),
+    AuthModule,
     ReputationModule,
     DatabaseModule,
     IndexerModule,
     NotificationModule,
   ],
   controllers: [AppController, UserController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+  ],
 })
 export class AppModule {}
