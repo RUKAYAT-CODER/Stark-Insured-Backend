@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { TerminusModule } from '@nestjs/terminus';
+import { HttpModule } from '@nestjs/axios';
 import { AppController } from './app.controller';
 import { UserController } from './user.controller';
 import { AppService } from './app.service';
@@ -16,6 +18,8 @@ import { NotificationModule } from './notification/notification.module';
       envFilePath: '.env',
       validate: validateEnv,
     }),
+    TerminusModule,
+    HttpModule,
     ReputationModule,
     DatabaseModule,
     IndexerModule,
