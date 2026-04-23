@@ -1,18 +1,5 @@
 import { plainToInstance } from 'class-transformer';
-
-import {
-  IsBoolean,
-  IsEnum,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUrl,
-  Min,
-  Max,
-  validateSync,
-  Matches,
-} from 'class-validator';
-
+import { IsEnum, IsNumber, IsString, validateSync } from 'class-validator';
 
 enum Environment {
   Development = 'development',
@@ -22,146 +9,61 @@ enum Environment {
 
 class EnvironmentVariables {
   @IsEnum(Environment)
-  @IsOptional()
-  NODE_ENV: Environment = Environment.Development;
+  NODE_ENV: Environment;
 
   @IsNumber()
-  @Min(0)
-  @Max(65535)
-  @IsOptional()
-  PORT: number = 4000;
+  PORT: number;
 
   @IsString()
-  @IsOptional()
-  APP_NAME: string = 'Stellar Insured Backend';
+  API_PREFIX: string;
 
   @IsString()
-  @IsOptional()
-  APP_VERSION: string = '1.0.0';
-
-  // Database Configuration
-  @IsString()
-  DATABASE_URL: string;
-
-  @IsString()
-  @IsOptional()
-  DATABASE_HOST: string = 'localhost';
+  DATABASE_HOST: string;
 
   @IsNumber()
-  @IsOptional()
-  DATABASE_PORT: number = 5432;
+  DATABASE_PORT: number;
 
   @IsString()
-  @IsOptional()
-  DATABASE_USERNAME: string;
+  DATABASE_USER: string;
 
   @IsString()
-  @IsOptional()
   DATABASE_PASSWORD: string;
 
   @IsString()
-  @IsOptional()
   DATABASE_NAME: string;
 
-  @IsBoolean()
-  @IsOptional()
-  DATABASE_SSL_ENABLED: boolean = false;
-
-  @IsBoolean()
-  @IsOptional()
-  DATABASE_SSL_REJECT_UNAUTHORIZED: boolean = false;
-
-  // Redis Configuration
-  @IsUrl({ protocols: ['redis', 'rediss'] })
-  @IsOptional()
-  REDIS_URL: string = 'redis://localhost:6379';
-
   @IsString()
-  @IsOptional()
-  REDIS_HOST: string = 'localhost';
+  REDIS_HOST: string;
 
   @IsNumber()
-  @IsOptional()
-  REDIS_PORT: number = 6379;
+  REDIS_PORT: number;
 
   @IsString()
-  @IsOptional()
-  REDIS_PASSWORD: string;
-
-  // Stellar Configuration
-  @IsString()
-  @IsOptional()
-  STELLAR_NETWORK: string = 'testnet';
-
-  @IsUrl()
-  @IsOptional()
-  STELLAR_HORIZON_URL: string = 'https://horizon-testnet.stellar.org';
-
-  @IsUrl()
-  @IsOptional()
-  STELLAR_RPC_URL: string = 'https://soroban-testnet.stellar.org';
-
-  @IsOptional()
-  @IsNumber()
-  REFRESH_TOKEN_TTL_DAYS: number = 30;
-
-  @IsString()
-  @IsOptional()
-  STELLAR_PASSPHRASE: string = 'Test SDF Network ; September 2015';
-
-  // Security Configuration
-  @IsString()
-  @Matches(/^.{32,}$/, { message: 'JWT_SECRET must be at least 32 characters long' })
   JWT_SECRET: string;
 
-  @IsString()
-  @IsOptional()
-  @Matches(/^.{32,}$/, { message: 'JWT_REFRESH_SECRET must be at least 32 characters long' })
-  JWT_REFRESH_SECRET: string;
+  @IsNumber()
+  JWT_EXPIRATION: number;
 
   @IsString()
-  @IsOptional()
-  JWT_EXPIRES_IN: string = '24h';
+  STELLAR_NETWORK: string;
+
+  @IsString()
+  STELLAR_RPC_URL: string;
+
+  @IsString()
+  STELLAR_NETWORK_PASSPHRASE: string;
+
+  @IsString()
+  PROJECT_LAUNCH_CONTRACT_ID: string;
+
+  @IsString()
+  ESCROW_CONTRACT_ID: string;
 
   @IsNumber()
-  @IsOptional()
-  BCRYPT_SALT_ROUNDS: number = 12;
-
-  // Encryption
-  @IsString()
-  @IsOptional()
-  @Matches(/^v\d+:[a-zA-Z0-9+/=]+$/, { message: 'ENCRYPTION_KEYS must follow the format v1:base64_key' })
-  ENCRYPTION_KEYS: string;
-
-  // Indexer (from stellar.config.ts needs)
-  @IsNumber()
-  @IsOptional()
-  INDEXER_POLL_INTERVAL_MS: number = 5000;
+  INDEXER_POLL_INTERVAL_MS: number;
 
   @IsNumber()
-  @IsOptional()
-  INDEXER_REORG_DEPTH_THRESHOLD: number = 5;
-
-  // Notification Configuration
-  @IsString()
-  @IsOptional()
-  SENDGRID_API_KEY: string;
-
-  @IsString()
-  @IsOptional()
-  SENDGRID_FROM_EMAIL: string = 'noreply@novafund.xyz';
-
-  @IsString()
-  @IsOptional()
-  VAPID_PUBLIC_KEY: string;
-
-  @IsString()
-  @IsOptional()
-  VAPID_PRIVATE_KEY: string;
-
-  @IsString()
-  @IsOptional()
-  VAPID_SUBJECT_EMAIL: string = 'admin@novafund.xyz';
+  INDEXER_REORG_DEPTH_THRESHOLD: number;
 }
 
 export function validateEnv(config: Record<string, unknown>) {
@@ -174,12 +76,7 @@ export function validateEnv(config: Record<string, unknown>) {
   });
 
   if (errors.length > 0) {
-    const errorMessages = errors
-      .map((error) => {
-        return Object.values(error.constraints || {}).join(', ');
-      })
-      .join('; ');
-    throw new Error(`Environment validation failed: ${errorMessages}`);
+    throw new Error(errors.toString());
   }
 
   return validatedConfig;

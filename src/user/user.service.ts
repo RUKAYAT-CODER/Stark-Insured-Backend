@@ -1,65 +1,63 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
-import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { UserResponseDto } from './dto/user-response.dto';
 
 @Injectable()
 export class UserService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Create a new user
-   */
-  async createUser(dto: CreateUserDto) {
+  async findById(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+    });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+    return user;
+  }
+
+  async findByWallet(walletAddress: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { walletAddress },
+    });
+    if (!user) {
+      throw new NotFoundException(`User with wallet address ${walletAddress} not found`);
+    }
+    return user;
+  }
+
+  async create(walletAddress: string, email?: string) {
+    const existingUser = await this.prisma.user.findUnique({
+      where: { walletAddress },
+    });
+
+    if (existingUser) {
+      throw new ConflictException('User with this wallet address already exists');
+    }
+
     return this.prisma.user.create({
       data: {
-        walletAddress: dto.walletAddress,
-        email: dto.email,
-        profileData: dto.profileData,
+        walletAddress,
+        email,
       },
     });
   }
 
-  /**
-   * Update user details
-   */
-  async updateUser(id: string, dto: UpdateUserDto) {
-    const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) throw new NotFoundException('User not found');
+  async update(id: string, updateData: UpdateUserDto) {
+    await this.findById(id); // Ensure user exists
 
     return this.prisma.user.update({
       where: { id },
-      data: dto,
+      data: {
+        ...updateData,
+      },
     });
   }
 
-  /**
-   * Get user by ID (safe fields only)
-   */
-  async getUserById(id: string) {
-    const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) throw new NotFoundException('User not found');
-
-    return {
-      id: user.id,
-      walletAddress: user.walletAddress,
-      email: user.email,
-      profileData: user.profileData,
-      reputationScore: user.reputationScore,
-      trustScore: user.trustScore,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
-  }
-
-  /**
-   * Get user by wallet address
-   */
-  async getUserByWalletAddress(walletAddress: string) {
-    const user = await this.prisma.user.findUnique({ where: { walletAddress } });
-    if (!user) throw new NotFoundException('User not found');
-
-    return this.getUserById(user.id);
+  async delete(id: string) {
+    await this.findById(id);
+    return this.prisma.user.delete({
+      where: { id },
+    });
   }
 }
