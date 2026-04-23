@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { create } from 'ipfs-http-client';
 
 import sharp from 'sharp';
@@ -7,10 +8,11 @@ import sharp from 'sharp';
 export class StorageService {
   private ipfs: ReturnType<typeof create>;
 
-  constructor() {
+  constructor(private configService: ConfigService) {
     this.ipfs = create({
-      host: 'your-ipfs-provider-url',
-      port: 5000,
+      host: this.configService.get<string>('IPFS_HOST', 'localhost'),
+      port: parseInt(this.configService.get<string>('IPFS_PORT', '5001')),
+      protocol: this.configService.get<string>('IPFS_PROTOCOL', 'https'),
     });
   }
 
