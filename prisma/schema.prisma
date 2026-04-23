@@ -12,16 +12,16 @@ datasource db {
 
 model User {
   id              String   @id @default(cuid())
-  walletAddress   String   @unique @map("wallet_address")
+  walletAddress   String   @unique @map("wallet_address") // Public blockchain identifier
   profileData     Json?    @map("profile_data")
   reputationScore Int      @default(0) @map("reputation_score")
   trustScore      Int      @default(500) @map("trust_score")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  // Notification fields
-  email            String? @unique
-  pushSubscription Json?   @map("push_subscription")
+  // Notification fields (encrypted at rest)
+  email            String? @unique // Encrypted at rest - PII
+  pushSubscription Json?   @map("push_subscription") // Encrypted at rest
 
   // Relations
   createdProjects      Project[]            @relation("ProjectCreator")
@@ -206,6 +206,21 @@ model EmailOutbox {
 
   @@index([status])
   @@map("email_outbox")
+}
+
+model IdempotencyKey {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  method      String
+  endpoint    String
+  requestBody Json
+  response    Json?
+  status      String   @default("PENDING")
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  @@index([expiresAt])
+  @@map("idempotency_keys")
 }
 
 enum NotificationType {

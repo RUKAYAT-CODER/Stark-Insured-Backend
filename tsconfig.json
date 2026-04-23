@@ -21,11 +21,9 @@
     "esModuleInterop": true
   },
   "include": [
-    "src/app.module.ts",
-    "src/app.controller.ts",
-    "src/app.service.ts",
-    "src/main.ts",
-    "src/config/**/*"
+    "src/**/*.ts",
+    "insurance/**/*.ts",
+    "ormconfig.ts"
   ],
   "exclude": ["node_modules", "dist", "test", "**/*.spec.ts", "**/*.test.ts"]
 }

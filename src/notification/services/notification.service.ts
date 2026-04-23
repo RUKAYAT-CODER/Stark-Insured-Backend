@@ -1,7 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
 import { EmailService } from './email.service';
 import { WebPushService } from './web-push.service';
+import { NotificationType } from '../enums/notification-type.enum';
+import { validateEnum } from '../../common/validators/enum.validator';
 
 @Injectable()
 export class NotificationService {
@@ -15,11 +17,14 @@ export class NotificationService {
 
   async notify(
     userId: string,
-    type: 'CONTRIBUTION' | 'MILESTONE' | 'DEADLINE' | 'SYSTEM',
+    type: NotificationType,
     title: string,
     message: string,
     data?: any,
   ): Promise<void> {
+    // Validate notification type at runtime
+    validateEnum(NotificationType, type, 'NotificationType');
+
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { notificationSettings: true },
