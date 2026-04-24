@@ -25,8 +25,11 @@ export class NotificationService {
     // Validate notification type at runtime
     validateEnum(NotificationType, type, 'NotificationType');
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
+    const user = await this.prisma.user.findFirst({
+      where: {
+        id: userId,
+        deletedAt: null,
+      },
       include: { notificationSettings: true },
     });
 

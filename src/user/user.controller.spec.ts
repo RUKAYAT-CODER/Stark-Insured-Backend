@@ -19,6 +19,7 @@ const mockUserService = {
   findByWallet: jest.fn(),
   update: jest.fn(),
   delete: jest.fn(),
+  findPaginated: jest.fn(),
 };
 
 describe('UserController', () => {
@@ -60,6 +61,19 @@ describe('UserController', () => {
       await expect(controller.getUserByWallet('GXXX')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('deleteUser', () => {
+    it('should return a soft-delete acknowledgement payload', async () => {
+      const deletedAt = new Date('2026-04-24T00:00:00.000Z');
+      mockUserService.delete.mockResolvedValue({ id: 'user-123', deletedAt });
+
+      await expect(controller.deleteUser({ id: 'user-123' })).resolves.toEqual({
+        success: true,
+        id: 'user-123',
+        deletedAt,
+      });
     });
   });
 });
