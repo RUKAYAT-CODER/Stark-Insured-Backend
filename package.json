@@ -19,7 +19,19 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "benchmark:before": "node scripts/benchmark.js && mv benchmark-results.json benchmark-before.json",
-    "benchmark:after": "node scripts/benchmark.js && mv benchmark-results.json benchmark-after.json"
+    "benchmark:after": "node scripts/benchmark.js && mv benchmark-results.json benchmark-after.json",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:migrate:generate": "prisma migrate dev --name",
+    "prisma:migrate:reset": "prisma migrate reset",
+    "prisma:generate": "prisma generate",
+    "prisma:studio": "prisma studio",
+    "typeorm:migrate:generate": "ts-node -r tsconfig-paths/register node_modules/typeorm/cli.js migration:generate -d ormconfig.ts",
+    "typeorm:migrate:run": "ts-node -r tsconfig-paths/register node_modules/typeorm/cli.js migration:run -d ormconfig.ts",
+    "typeorm:migrate:revert": "ts-node -r tsconfig-paths/register node_modules/typeorm/cli.js migration:revert -d ormconfig.ts",
+    "typeorm:migrate:show": "ts-node -r tsconfig-paths/register node_modules/typeorm/cli.js migration:show -d ormconfig.ts",
+    "db:migrate": "npm run prisma:migrate:deploy && npm run typeorm:migrate:run",
+    "db:migrate:dev": "npm run prisma:migrate:dev && npm run typeorm:migrate:run"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.996.0",
