@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { RiskType } from './enums/risk-type.enum';
 import { EncryptionService } from '../src/encryption/encryption.service';
+import { AuditService } from './services/audit.service';
 
 @Injectable()
 export class InsuranceService {
@@ -16,6 +17,7 @@ export class InsuranceService {
     private readonly pools: PoolService,
     @InjectRepository(InsurancePolicy) private readonly repo: Repository<InsurancePolicy>,
     private readonly encryption: EncryptionService,
+    private readonly auditService: AuditService,
   ) {}
 
   async purchasePolicy(userId: string, poolId: string, riskType: RiskType, coverageAmount: number) {
