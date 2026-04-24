@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InsurancePool } from './entities/insurance-pool.entity';
-import { Repository } from 'typeorm';
+import { Repository, QueryRunner } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AuditService } from './services/audit.service';
 
@@ -26,16 +26,18 @@ export class PoolService {
     return updatedPool;
   }
 
-  async lockCapital(poolId: string, amount: number) {
+  async lockCapital(poolId: string, amount: number, queryRunner?: QueryRunner) {
     if (amount <= 0) {
       throw new BadRequestException('Amount must be positive');
     }
-    const pool = await this.repo.findOne({ where: { id: poolId } });
+    const manager = queryRunner?.manager || this.repo.manager;
+    const pool = await manager.findOne(InsurancePool, { where: { id: poolId } });
     if (!pool) {
       throw new NotFoundException(`Pool ${poolId} not found`);
     }
     const beforeState = { ...pool };
     pool.lockedCapital = Number(pool.lockedCapital) + amount;
+    return manager.save(pool);
     const updatedPool = await this.repo.save(pool);
     await this.auditService.logUpdate('InsurancePool', poolId, beforeState, updatedPool);
     return updatedPool;
