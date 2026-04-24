@@ -32,6 +32,29 @@ export class UserService {
     return this.decryptUser(user);
   }
 
+  async findPaginated(page = 1, limit = 20) {
+    const safeLimit = Math.min(Math.max(limit, 1), 100);
+    const offset = Math.max(page - 1, 0) * safeLimit;
+
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        skip: offset,
+        take: safeLimit,
+      }),
+      this.prisma.user.count(),
+    ]);
+
+    return {
+      data: users.map((user) => this.decryptUser(user)),
+      meta: {
+        page,
+        limit: safeLimit,
+        total,
+        totalPages: Math.max(Math.ceil(total / safeLimit), 1),
+      },
+    };
+  }
+
   async create(walletAddress: string, email?: string) {
     // Check if user exists (wallet address is public identifier, not encrypted)
     const existingUser = await this.prisma.user.findUnique({

@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType, Logger } from '@nestjs/common';
+import type { Request, Response, NextFunction } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import * as csurf from 'csurf';
@@ -68,8 +69,30 @@ async function bootstrap() {
   // Enable NestJS shutdown hooks so lifecycle events (onModuleDestroy, etc.) fire on SIGTERM/SIGINT
   app.enableShutdownHooks();
 
+  const requestTimeoutMs = configService.get<number>('REQUEST_TIMEOUT_MS', 30000);
+  const keepAliveTimeoutMs = configService.get<number>('KEEP_ALIVE_TIMEOUT_MS', 5000);
+
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    res.setTimeout(requestTimeoutMs, () => {
+      if (!res.headersSent) {
+        res.status(408).json({
+          error: 'Request Timeout',
+          message: `Request exceeded ${requestTimeoutMs / 1000} second limit`,
+        });
+      }
+    });
+    next();
+  });
+
   const port = configService.get<number>('PORT', 3000);
   await app.listen(port);
+
+  const server = app.getHttpServer() as any;
+  if (typeof server?.setTimeout === 'function') {
+    server.setTimeout(requestTimeoutMs);
+  }
+  server.keepAliveTimeout = keepAliveTimeoutMs;
+  server.headersTimeout = requestTimeoutMs + 10000;
 
   logger.log(`Application is running on: http://localhost:${port}/${apiPrefix}`);
 
