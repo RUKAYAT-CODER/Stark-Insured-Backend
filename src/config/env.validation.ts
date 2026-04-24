@@ -33,6 +33,27 @@ class EnvironmentVariables {
   DATABASE_NAME: string;
 
   @IsString()
+  @IsOptional()
+  DATABASE_LOGGING: string = 'error,warn';
+
+  @IsNumber()
+  @IsOptional()
+  DATABASE_MAX_QUERY_EXECUTION_TIME: number = 1000;
+
+  @IsBoolean()
+  @IsOptional()
+  DATABASE_SSL_ENABLED: boolean = false;
+
+  @IsBoolean()
+  @IsOptional()
+  DATABASE_SSL_REJECT_UNAUTHORIZED: boolean = false;
+
+  // Redis Configuration
+  @IsUrl({ protocols: ['redis', 'rediss'] })
+  @IsOptional()
+  REDIS_URL: string = 'redis://localhost:6379';
+
+  @IsString()
   REDIS_HOST: string;
 
   @IsNumber()
@@ -63,7 +84,25 @@ class EnvironmentVariables {
   INDEXER_POLL_INTERVAL_MS: number;
 
   @IsNumber()
-  INDEXER_REORG_DEPTH_THRESHOLD: number;
+  @IsOptional()
+  THROTTLE_DEFAULT_LIMIT: number = 100;
+
+  // Authentication endpoints
+  @IsNumber()
+  @IsOptional()
+  THROTTLE_AUTH_TTL: number = 900000;
+
+  @IsNumber()
+  @IsOptional()
+  THROTTLE_AUTH_LIMIT: number = 5;
+
+  @IsBoolean()
+  @IsOptional()
+  RATE_LIMIT_REDIS_ENABLED: boolean = false;
+
+  @IsString()
+  @IsOptional()
+  LOG_LEVEL: string = 'info';
 }
 
 export function validateEnv(config: Record<string, unknown>) {
