@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 
@@ -17,9 +17,16 @@ async function bootstrap() {
     }),
   );
 
-  // API prefix
-  const apiPrefix = configService.get<string>('API_PREFIX', 'api/v1');
+  // API prefix - version is now handled by NestJS versioning
+  const apiPrefix = configService.get<string>('API_PREFIX', 'api');
   app.setGlobalPrefix(apiPrefix);
+
+  // Enable URI-based API versioning (e.g. /api/v1/users, /api/v2/users)
+  app.enableVersioning({
+    type: VersioningType.URI,
+    defaultVersion: '1',
+    prefix: 'v',
+  });
 
   // CORS
   app.enableCors();

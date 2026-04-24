@@ -7,7 +7,7 @@ import { PurchasePolicyDto } from './dto/purchase-policy.dto';
 import { CreateReinsuranceDto } from './dto/create-reinsurance.dto';
 import { IdempotencyInterceptor } from '../src/interceptors/idempotency.interceptor';
 
-@Controller('api/insurance')
+@Controller({ path: 'insurance', version: '1' })
 export class InsuranceController {
   constructor(
     private readonly insurance: InsuranceService,

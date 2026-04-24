@@ -1,8 +1,8 @@
-import { Controller, Post } from '@nestjs/common';
+import { Controller, Post, VERSION_NEUTRAL } from '@nestjs/common';
 import { NonceService } from './nonce.service';
 import { Public } from '../auth/decorators/public.decorator';
 
-@Controller('nonce')
+@Controller({ path: 'nonce', version: VERSION_NEUTRAL })
 export class NonceController {
   constructor(private readonly nonceService: NonceService) {}
 
