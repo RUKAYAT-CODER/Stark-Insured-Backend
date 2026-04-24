@@ -59,7 +59,11 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   async deleteUser(@Param() params: UserParamsDto) {
-    return this.userService.delete(params.id);
+    const result = await this.userService.delete(params.id);
+    return {
+      success: true,
+      ...result,
+    };
   }
 
   private mapUserResponse(user: any) {

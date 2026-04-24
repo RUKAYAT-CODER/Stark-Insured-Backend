@@ -11,8 +11,11 @@ export class UserService {
   ) {}
 
   async findById(id: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
+    const user = await this.prisma.user.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+      },
     });
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
@@ -22,8 +25,11 @@ export class UserService {
   }
 
   async findByWallet(walletAddress: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { walletAddress },
+    const user = await this.prisma.user.findFirst({
+      where: {
+        walletAddress,
+        deletedAt: null,
+      },
     });
     if (!user) {
       throw new NotFoundException(`User with wallet address ${walletAddress} not found`);
@@ -38,10 +44,13 @@ export class UserService {
 
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
+        where: { deletedAt: null },
         skip: offset,
         take: safeLimit,
       }),
-      this.prisma.user.count(),
+      this.prisma.user.count({
+        where: { deletedAt: null },
+      }),
     ]);
 
     return {
@@ -99,9 +108,16 @@ export class UserService {
 
   async delete(id: string) {
     await this.findById(id);
-    return this.prisma.user.delete({
+    const deletedUser = await this.prisma.user.update({
       where: { id },
+      data: {
+        deletedAt: new Date(),
+      },
     });
+    return {
+      id: deletedUser.id,
+      deletedAt: deletedUser.deletedAt,
+    };
   }
 
   /**
