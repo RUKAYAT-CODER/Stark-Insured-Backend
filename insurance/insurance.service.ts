@@ -5,6 +5,7 @@ import { InsurancePolicy } from './entities/insurance-policy.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { RiskType } from './enums/risk-type.enum';
+import { EncryptionService } from '../src/encryption/encryption.service';
 
 @Injectable()
 export class InsuranceService {
@@ -12,13 +13,21 @@ export class InsuranceService {
     private readonly pricing: PricingService,
     private readonly pools: PoolService,
     @InjectRepository(InsurancePolicy) private readonly repo: Repository<InsurancePolicy>,
+    private readonly encryption: EncryptionService,
   ) {}
 
   async purchasePolicy(userId: string, poolId: string, riskType: RiskType, coverageAmount: number) {
     const premium = this.pricing.calculatePremium(riskType, coverageAmount);
     await this.pools.lockCapital(poolId, coverageAmount);
 
-    const policy = this.repo.create({ userId, poolId, riskType, coverageAmount, premium });
+    // Encrypt sensitive financial data before saving
+    const policy = this.repo.create({
+      userId,
+      poolId,
+      riskType,
+      coverageAmount: parseFloat(this.encryption.encrypt(coverageAmount.toString())),
+      premium: parseFloat(this.encryption.encrypt(premium.toString())),
+    });
     return this.repo.save(policy);
   }
 }
