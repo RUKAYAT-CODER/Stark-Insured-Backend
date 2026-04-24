@@ -1,39 +1,100 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  ServiceUnavailableException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { create } from 'ipfs-http-client';
+import { create, IPFSHTTPClient } from 'ipfs-http-client';
+import * as fs from 'fs';
+import * as path from 'path';
 
-import sharp from 'sharp';
+let sharp: typeof import('sharp') | undefined;
+try {
+  sharp = require('sharp');
+} catch (err) {
+  // sharp native dependency not available
+}
 
 @Injectable()
 export class StorageService {
-  private ipfs: ReturnType<typeof create>;
+  private readonly logger = new Logger(StorageService.name);
+  private ipfs: IPFSHTTPClient;
 
   constructor(private configService: ConfigService) {
-    this.ipfs = create({
-      host: this.configService.get<string>('IPFS_HOST', 'localhost'),
-      port: parseInt(this.configService.get<string>('IPFS_PORT', '5001')),
-      protocol: this.configService.get<string>('IPFS_PROTOCOL', 'https'),
-    });
+    const host = this.configService.get<string>('IPFS_HOST', 'localhost');
+    const port = parseInt(this.configService.get<string>('IPFS_PORT', '5001') ?? '5001', 10);
+    const protocol = this.configService.get<string>('IPFS_PROTOCOL', 'https') as 'http' | 'https';
+
+    try {
+      this.ipfs = create({ host, port, protocol });
+    } catch (error) {
+      this.logger.error('Failed to initialize IPFS client', error);
+      throw new InternalServerErrorException('IPFS client initialization failed');
+    }
   }
 
-  async pinProjectMetadata(metadata: any): Promise<string> {
-    const cid = await this.ipfs.add(metadata);
-    return cid.path;
+  async pinProjectMetadata(metadata: Record<string, unknown>): Promise<string> {
+    try {
+      const cid = await this.ipfs.add(JSON.stringify(metadata));
+      this.logger.log(`Pinned metadata with CID: ${cid.path}`);
+      return cid.path;
+    } catch (error) {
+      this.logger.error('Failed to pin metadata to IPFS', error);
+      throw new ServiceUnavailableException('Failed to pin metadata to IPFS');
+    }
   }
 
   async optimizeImage(imagePath: string, width: number, height: number): Promise<Buffer> {
-    const optimizedImage = await sharp(imagePath)
-      .resize(width, height)
-      .jpeg({ quality: 80 })
-      .toBuffer();
-    return optimizedImage;
+    if (!sharp) {
+      this.logger.error('Sharp library is not available. Native dependencies may be missing.');
+      throw new ServiceUnavailableException(
+        'Image optimization service is unavailable. Native dependencies are missing.',
+      );
+    }
+
+    const resolvedPath = path.resolve(imagePath);
+    if (!fs.existsSync(resolvedPath)) {
+      this.logger.warn(`Image path does not exist: ${resolvedPath}`);
+      throw new BadRequestException(`Image path does not exist: ${imagePath}`);
+    }
+
+    const stats = fs.statSync(resolvedPath);
+    if (!stats.isFile()) {
+      throw new BadRequestException(`Path is not a file: ${imagePath}`);
+    }
+
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.tiff'];
+    const ext = path.extname(resolvedPath).toLowerCase();
+    if (!allowedExtensions.includes(ext)) {
+      throw new BadRequestException(
+        `Invalid image format: ${ext}. Allowed: ${allowedExtensions.join(', ')}`,
+      );
+    }
+
+    try {
+      const optimizedImage = await sharp(resolvedPath)
+        .resize(width, height, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 80, progressive: true })
+        .toBuffer();
+      this.logger.log(`Optimized image: ${resolvedPath} -> ${width}x${height}`);
+      return optimizedImage;
+    } catch (error) {
+      this.logger.error(`Failed to optimize image: ${resolvedPath}`, error);
+      throw new BadRequestException('Failed to optimize image. Ensure the file is a valid image.');
+    }
   }
 
   async verifyIPFSHash(hash: string): Promise<boolean> {
     try {
-      await this.ipfs.cat(hash);
-      return true;
+      const chunks = [];
+      for await (const chunk of this.ipfs.cat(hash)) {
+        chunks.push(chunk);
+      }
+      return chunks.length > 0;
     } catch (error) {
+      this.logger.warn(`IPFS hash verification failed for ${hash}`, error);
       return false;
     }
   }
