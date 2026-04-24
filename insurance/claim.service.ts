@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Claim } from './entities/claim.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -15,7 +15,7 @@ export class ClaimService {
   async assessClaim(claimId: string): Promise<Claim> {
     const claim = await this.repo.findOne({ where: { id: claimId } });
     if (!claim) {
-      throw new Error(`Claim with ID ${claimId} not found`);
+      throw new NotFoundException(`Claim with ID ${claimId} not found`);
     }
     // Simplified automated assessment
     claim.status = ClaimStatus.APPROVED;
@@ -26,7 +26,7 @@ export class ClaimService {
   async payClaim(claimId: string): Promise<Claim> {
     const claim = await this.repo.findOne({ where: { id: claimId } });
     if (!claim) {
-      throw new Error(`Claim with ID ${claimId} not found`);
+      throw new NotFoundException(`Claim with ID ${claimId} not found`);
     }
     claim.status = ClaimStatus.PAID;
     return this.repo.save(claim);
