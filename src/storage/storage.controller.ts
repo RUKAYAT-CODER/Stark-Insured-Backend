@@ -2,7 +2,7 @@ import { Controller, Post, Body } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { StorageService } from './storage.service';
 
-@Controller('projects')
+@Controller({ path: 'projects', version: '1' })
 export class StorageController {
   constructor(private readonly storageService: StorageService) {}
 
