@@ -18,6 +18,8 @@ import { EncryptionModule } from './encryption/encryption.module';
 import { StorageModule } from './storage/storage.module';
 import { CsrfModule } from './csrf/csrf.module';
 import { CorrelationIdMiddleware } from './middleware/correlation-id.middleware';
+import { InsuranceModule } from 'insurance/insurance.module';
+
 
 
 @Module({
@@ -49,6 +51,7 @@ import { CorrelationIdMiddleware } from './middleware/correlation-id.middleware'
     NotificationModule,
     EncryptionModule,
     StorageModule,
+     InsuranceModule,
   ],
   controllers: [AppController],
   providers: [
