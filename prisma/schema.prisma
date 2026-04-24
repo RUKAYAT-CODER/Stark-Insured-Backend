@@ -12,16 +12,16 @@ datasource db {
 
 model User {
   id              String   @id @default(cuid())
-  walletAddress   String   @unique @map("wallet_address")
+  walletAddress   String   @unique @map("wallet_address") // Public blockchain identifier
   profileData     Json?    @map("profile_data")
   reputationScore Int      @default(0) @map("reputation_score")
   trustScore      Int      @default(500) @map("trust_score")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  // Notification fields
-  email            String? @unique
-  pushSubscription Json?   @map("push_subscription")
+  // Notification fields (encrypted at rest)
+  email            String? @unique // Encrypted at rest - PII
+  pushSubscription Json?   @map("push_subscription") // Encrypted at rest
 
   // Relations
   createdProjects      Project[]            @relation("ProjectCreator")
@@ -29,46 +29,8 @@ model User {
   reputationHistory    ReputationHistory[]
   notificationSettings NotificationSetting?
   notifications        Notification[]
-  proposals            Proposal[]           @relation("ProposalCreator")
-  votes                Vote[]               @relation("UserVotes")
-  refreshTokens        RefreshToken[]
-  tokenAuditLogs       TokenAuditLog[]
 
   @@map("users")
-}
-
-model RefreshToken {
-  id         String   @id @default(cuid())
-  tokenHash  String   @unique @map("token_hash")
-  userId     String   @map("user_id")
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  family     String // token family for rotation chain detection
-  isRevoked  Boolean  @default(false) @map("is_revoked")
-  expiresAt  DateTime @map("expires_at")
-  createdAt  DateTime @default(now()) @map("created_at")
-  replacedBy String?  @map("replaced_by") // tokenHash of the next token in chain
-  ipAddress  String?  @map("ip_address")
-  userAgent  String?  @map("user_agent")
-
-  @@index([userId])
-  @@index([family])
-  @@map("refresh_tokens")
-}
-
-model TokenAuditLog {
-  id          String   @id @default(cuid())
-  userId      String   @map("user_id")
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  action      String // ISSUED, ROTATED, REVOKED, LOGOUT, REUSE_DETECTED
-  tokenFamily String?  @map("token_family")
-  ipAddress   String?  @map("ip_address")
-  userAgent   String?  @map("user_agent")
-  metadata    Json?
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  @@index([userId])
-  @@index([createdAt])
-  @@map("token_audit_logs")
 }
 
 model Project {
@@ -246,6 +208,21 @@ model EmailOutbox {
   @@map("email_outbox")
 }
 
+model IdempotencyKey {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  method      String
+  endpoint    String
+  requestBody Json
+  response    Json?
+  status      String   @default("PENDING")
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  @@index([expiresAt])
+  @@map("idempotency_keys")
+}
+
 enum NotificationType {
   CONTRIBUTION
   MILESTONE
@@ -257,55 +234,4 @@ enum EmailStatus {
   PENDING
   SENT
   FAILED
-}
-
-model Proposal {
-  id          String         @id @default(cuid())
-  title       String
-  description String
-  creatorId   String         @map("creator_id")
-  creator     User           @relation("ProposalCreator", fields: [creatorId], references: [id])
-  status      ProposalStatus @default(PENDING)
-  votes       Vote[]
-  expiresAt   DateTime       @map("expires_at")
-  createdAt   DateTime       @default(now()) @map("created_at")
-  updatedAt   DateTime       @updatedAt @map("updated_at")
-
-  @@map("proposals")
-}
-
-model Vote {
-  id         String   @id @default(cuid())
-  proposalId String   @map("proposal_id")
-  proposal   Proposal @relation(fields: [proposalId], references: [id])
-  voterId    String   @map("voter_id")
-  voter      User     @relation("UserVotes", fields: [voterId], references: [id])
-  support    Boolean
-  createdAt  DateTime @default(now()) @map("created_at")
-
-  @@unique([proposalId, voterId])
-  @@map("votes")
-}
-
-enum ProposalStatus {
-  PENDING
-  ACTIVE
-  SUCCEEDED
-  DEFEATED
-  EXECUTED
-  CANCELLED
-}
-
-model AuditLog {
-  id        String   @id @default(cuid())
-  action    String   @map("action")
-  actorId   String?  @map("actor_id")
-  ip        String?  @map("ip")
-  metadata  Json?    @map("metadata")
-  timestamp DateTime @default(now()) @map("timestamp")
-
-  @@index([action])
-  @@index([actorId])
-  @@index([timestamp])
-  @@map("audit_logs")
 }

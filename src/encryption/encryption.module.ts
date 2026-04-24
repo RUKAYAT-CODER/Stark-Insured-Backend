@@ -1,10 +1,7 @@
-import { Module, Global } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { Module } from '@nestjs/common';
 import { EncryptionService } from './encryption.service';
 
-@Global()
 @Module({
-  imports: [ConfigModule],
   providers: [EncryptionService],
   exports: [EncryptionService],
 })

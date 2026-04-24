@@ -8,24 +8,21 @@ import sharp from 'sharp';
 export class StorageService {
   private ipfs: ReturnType<typeof create>;
 
-  constructor(private readonly config: ConfigService) {
-    const ipfsUrl = this.config.get<string>('STELLAR_HORIZON_URL') || 'http://localhost:5001';
-    this.ipfs = create({ url: ipfsUrl });
-  }
-
-  async pinFile(fileBuffer: Buffer): Promise<string> {
-    const cid = await this.ipfs.add(fileBuffer);
-    return cid.path;
+  constructor(private configService: ConfigService) {
+    this.ipfs = create({
+      host: this.configService.get<string>('IPFS_HOST', 'localhost'),
+      port: parseInt(this.configService.get<string>('IPFS_PORT', '5001')),
+      protocol: this.configService.get<string>('IPFS_PROTOCOL', 'https'),
+    });
   }
 
   async pinProjectMetadata(metadata: any): Promise<string> {
-    const data = typeof metadata === 'string' ? metadata : JSON.stringify(metadata);
-    const cid = await this.ipfs.add(data);
+    const cid = await this.ipfs.add(metadata);
     return cid.path;
   }
 
-  async optimizeImage(fileBuffer: Buffer, width: number, height: number): Promise<Buffer> {
-    const optimizedImage = await sharp(fileBuffer)
+  async optimizeImage(imagePath: string, width: number, height: number): Promise<Buffer> {
+    const optimizedImage = await sharp(imagePath)
       .resize(width, height)
       .jpeg({ quality: 80 })
       .toBuffer();

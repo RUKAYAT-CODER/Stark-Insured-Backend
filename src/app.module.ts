@@ -1,7 +1,8 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { EventEmitterModule } from '@nestjs/event-emitter';
+import { TerminusModule } from '@nestjs/terminus';
+import { HttpModule } from '@nestjs/axios';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { validateEnv } from './config/env.validation';
@@ -9,14 +10,11 @@ import { ReputationModule } from './reputation/reputation.module';
 import { DatabaseModule } from './database.module';
 import { IndexerModule } from './indexer/indexer.module';
 import { NotificationModule } from './notification/notification.module';
-import { GovernanceModule } from './governance/governance.module';
-import { InsuranceModule } from './insurance/insurance.module';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
-import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
-import { AnalyticsModule } from './analytics/analytics.module';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { EncryptionModule } from './encryption/encryption.module';
 import { StorageModule } from './storage/storage.module';
 import { CsrfModule } from './csrf/csrf.module';
 import { CorrelationIdMiddleware } from './middleware/correlation-id.middleware';
@@ -29,7 +27,8 @@ import { CorrelationIdMiddleware } from './middleware/correlation-id.middleware'
       envFilePath: '.env',
       validate: validateEnv,
     }),
-    TypeOrmModule.forRootAsync({
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
@@ -40,44 +39,23 @@ import { CorrelationIdMiddleware } from './middleware/correlation-id.middleware'
         maxQueryExecutionTime: configService.get<number>('DATABASE_MAX_QUERY_EXECUTION_TIME', 1000),
       }),
     }),
-    EventEmitterModule.forRoot(),
+    TerminusModule,
+    HttpModule,
+    AuthModule,
+    UserModule,
     ReputationModule,
     DatabaseModule,
     IndexerModule,
     NotificationModule,
-    GovernanceModule,
-    InsuranceModule,
-
-    AuditModule,
-  
-    AuthModule,
-    UserModule,
-    AnalyticsModule,
+    EncryptionModule,
     StorageModule,
-    CsrfModule,
-
-    ThrottlerModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => [
-        {
-          name: 'default',
-          ttl: config.get<number>('THROTTLE_DEFAULT_TTL') || 900000,
-          limit: config.get<number>('THROTTLE_DEFAULT_LIMIT') || 100,
-        },
-        {
-          name: 'auth',
-          ttl: config.get<number>('THROTTLE_AUTH_TTL') || 900000,
-          limit: config.get<number>('THROTTLE_AUTH_LIMIT') || 5,
-        },
-      ],
-    }),
   ],
   controllers: [AppController],
   providers: [
     AppService,
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: JwtAuthGuard,
     },
   ],
 })
