@@ -14,6 +14,9 @@ export class ClaimService {
 
   async assessClaim(claimId: string): Promise<Claim> {
     const claim = await this.repo.findOne({ where: { id: claimId } });
+    if (!claim) {
+      throw new Error(`Claim with ID ${claimId} not found`);
+    }
     // Simplified automated assessment
     claim.status = ClaimStatus.APPROVED;
     claim.payoutAmount = claim.claimAmount;
@@ -22,6 +25,9 @@ export class ClaimService {
 
   async payClaim(claimId: string): Promise<Claim> {
     const claim = await this.repo.findOne({ where: { id: claimId } });
+    if (!claim) {
+      throw new Error(`Claim with ID ${claimId} not found`);
+    }
     claim.status = ClaimStatus.PAID;
     return this.repo.save(claim);
   }

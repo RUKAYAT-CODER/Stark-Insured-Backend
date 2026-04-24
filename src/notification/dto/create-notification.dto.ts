@@ -3,16 +3,16 @@ import { NotificationType } from '../enums/notification-type.enum';
 
 export class CreateNotificationDto {
   @IsString()
-  userId: string;
+  userId!: string;
 
   @IsEnum(NotificationType)
-  type: NotificationType;
+  type!: NotificationType;
 
   @IsString()
-  title: string;
+  title!: string;
 
   @IsString()
-  message: string;
+  message!: string;
 
   @IsOptional()
   @IsObject()

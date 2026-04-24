@@ -2,9 +2,9 @@ import { IsString, IsNumber, IsPositive, IsUUID } from 'class-validator';
 
 export class CreateClaimDto {
   @IsUUID()
-  policyId: string;
+  policyId!: string;
 
   @IsNumber()
   @IsPositive()
-  claimAmount: number;
+  claimAmount!: number;
 }
