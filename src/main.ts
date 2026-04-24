@@ -4,13 +4,32 @@ import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import * as csurf from 'csurf';
 import * as cookieParser from 'cookie-parser';
+import { logger } from './config/winston.config';
+import * as expressWinston from 'express-winston';
+import * as winston from 'winston';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: logger,
+  });
   const configService = app.get(ConfigService);
 
   // Cookie parser for CSRF
   app.use(cookieParser());
+
+  // Request logging
+  app.use(expressWinston.logger({
+    winstonInstance: logger,
+    statusLevels: true,
+    format: winston.format.combine(
+      winston.format.timestamp(),
+      winston.format.json()
+    ),
+    meta: true,
+    msg: "HTTP {{req.method}} {{req.url}}",
+    expressFormat: true,
+    colorize: false,
+  }));
 
   // CSRF protection
   app.use(csurf({

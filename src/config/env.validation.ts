@@ -63,6 +63,14 @@ class EnvironmentVariables {
   @IsOptional()
   DATABASE_NAME: string;
 
+  @IsString()
+  @IsOptional()
+  DATABASE_LOGGING: string = 'error,warn';
+
+  @IsNumber()
+  @IsOptional()
+  DATABASE_MAX_QUERY_EXECUTION_TIME: number = 1000;
+
   @IsBoolean()
   @IsOptional()
   DATABASE_SSL_ENABLED: boolean = false;
@@ -185,10 +193,13 @@ class EnvironmentVariables {
   @IsOptional()
   THROTTLE_AUTH_LIMIT: number = 5;
 
-  // Rate Limiting - Redis
   @IsBoolean()
   @IsOptional()
   RATE_LIMIT_REDIS_ENABLED: boolean = false;
+
+  @IsString()
+  @IsOptional()
+  LOG_LEVEL: string = 'info';
 }
 
 export function validateEnv(config: Record<string, unknown>) {

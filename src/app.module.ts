@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -19,6 +19,7 @@ import { UserModule } from './user/user.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { StorageModule } from './storage/storage.module';
 import { CsrfModule } from './csrf/csrf.module';
+import { CorrelationIdMiddleware } from './middleware/correlation-id.middleware';
 
 
 @Module({
@@ -35,6 +36,8 @@ import { CsrfModule } from './csrf/csrf.module';
         url: configService.get<string>('DATABASE_URL'),
         autoLoadEntities: true,
         synchronize: configService.get<string>('NODE_ENV') !== 'production',
+        logging: configService.get<string>('DATABASE_LOGGING', 'error,warn').split(',') as any,
+        maxQueryExecutionTime: configService.get<number>('DATABASE_MAX_QUERY_EXECUTION_TIME', 1000),
       }),
     }),
     EventEmitterModule.forRoot(),
@@ -78,4 +81,8 @@ import { CsrfModule } from './csrf/csrf.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(CorrelationIdMiddleware).forRoutes('*');
+  }
+}
