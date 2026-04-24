@@ -26,29 +26,33 @@ export class InsuranceService {
       throw new BadRequestException('Coverage amount must be positive');
     }
 
-    const premium = this.pricing.calculatePremium(riskType, coverageAmount);
+    const queryRunner = this.repo.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
     try {
-      await this.pools.lockCapital(poolId, coverageAmount);
-    } catch (error) {
-      this.logger.error(`Failed to lock capital for pool ${poolId}: ${error.message}`);
-      throw error;
-    }
+      const premium = this.pricing.calculatePremium(riskType, coverageAmount);
 
-    // Encrypt sensitive financial data before saving
-    const policy = this.repo.create({
-      userId,
-      poolId,
-      riskType,
-      coverageAmount: parseFloat(this.encryption.encrypt(coverageAmount.toString())),
-      premium: parseFloat(this.encryption.encrypt(premium.toString())),
-    });
+      await this.pools.lockCapital(poolId, coverageAmount, queryRunner);
 
-    try {
-      return await this.repo.save(policy);
+      // Encrypt sensitive financial data before saving
+      const policy = this.repo.create({
+        userId,
+        poolId,
+        riskType,
+        coverageAmount: parseFloat(this.encryption.encrypt(coverageAmount.toString())),
+        premium: parseFloat(this.encryption.encrypt(premium.toString())),
+      });
+
+      const savedPolicy = await queryRunner.manager.save(policy);
+      await queryRunner.commitTransaction();
+      return savedPolicy;
     } catch (error) {
-      this.logger.error(`Failed to save policy for user ${userId}: ${error.message}`);
+      await queryRunner.rollbackTransaction();
+      this.logger.error(`Purchase policy failed for user ${userId}, pool ${poolId}: ${error.message}`);
       throw error;
+    } finally {
+      await queryRunner.release();
     }
   }
 }
