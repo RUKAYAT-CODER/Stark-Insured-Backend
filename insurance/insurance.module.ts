@@ -6,6 +6,7 @@ import { InsurancePolicy } from './entities/insurance-policy.entity';
 import { InsurancePool } from './entities/insurance-pool.entity';
 import { Claim } from './entities/claim.entity';
 import { ReinsuranceContract } from './entities/reinsurance-contract.entity';
+import { AuditLog } from './entities/audit-log.entity';
 
 import { InsuranceController } from './insurance.controller';
 
@@ -14,6 +15,7 @@ import { PoolService } from './pool.service';
 import { ClaimService } from './claim.service';
 import { ReinsuranceService } from './reinsurance.service';
 import { PricingService } from './pricing.service';
+import { AuditService } from './services/audit.service';
 import { IdempotencyInterceptor } from '../src/interceptors/idempotency.interceptor';
 
 @Module({
@@ -23,6 +25,7 @@ import { IdempotencyInterceptor } from '../src/interceptors/idempotency.intercep
       InsurancePool,
       Claim,
       ReinsuranceContract,
+      AuditLog,
     ]),
   ],
   controllers: [InsuranceController],
@@ -32,6 +35,7 @@ import { IdempotencyInterceptor } from '../src/interceptors/idempotency.intercep
     ClaimService,
     ReinsuranceService,
     PricingService,
+    AuditService,
     PrismaService,
     IdempotencyInterceptor,
   ],
@@ -41,6 +45,7 @@ import { IdempotencyInterceptor } from '../src/interceptors/idempotency.intercep
     ClaimService,
     ReinsuranceService,
     PricingService,
+    AuditService,
     PrismaService,
   ],
 })
