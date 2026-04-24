@@ -6,6 +6,9 @@ import {
   Delete,
   Param,
   Body,
+  Query,
+  DefaultValuePipe,
+  ParseIntPipe,
   UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
@@ -17,6 +20,15 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @Controller({ path: 'user', version: '1' })
 export class UserController {
   constructor(private readonly userService: UserService) {}
+
+  @Throttle({ default: { limit: 100, ttl: 60000 } }) // 100 users list requests per minute
+  @Get()
+  async getUsers(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page = 1,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit = 20,
+  ) {
+    return this.userService.findPaginated(page, limit);
+  }
 
   @Throttle({ default: { limit: 100, ttl: 60000 } }) // 100 user lookups per minute
   @Get(':id')
