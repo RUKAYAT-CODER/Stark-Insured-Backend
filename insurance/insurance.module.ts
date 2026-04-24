@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { PrismaService } from '../src/prisma.service';
 
 import { InsurancePolicy } from './entities/insurance-policy.entity';
 import { InsurancePool } from './entities/insurance-pool.entity';
@@ -13,6 +14,7 @@ import { PoolService } from './pool.service';
 import { ClaimService } from './claim.service';
 import { ReinsuranceService } from './reinsurance.service';
 import { PricingService } from './pricing.service';
+import { IdempotencyInterceptor } from '../src/interceptors/idempotency.interceptor';
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { PricingService } from './pricing.service';
     ClaimService,
     ReinsuranceService,
     PricingService,
+    PrismaService,
+    IdempotencyInterceptor,
   ],
   exports: [
     InsuranceService,
@@ -37,6 +41,7 @@ import { PricingService } from './pricing.service';
     ClaimService,
     ReinsuranceService,
     PricingService,
+    PrismaService,
   ],
 })
 export class InsuranceModule {}
