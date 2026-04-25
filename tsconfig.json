@@ -22,7 +22,6 @@
   },
   "include": [
     "src/**/*.ts",
-    "insurance/**/*.ts",
     "ormconfig.ts"
   ],
   "exclude": ["node_modules", "dist", "test", "**/*.spec.ts", "**/*.test.ts"]

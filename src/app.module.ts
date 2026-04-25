@@ -19,7 +19,7 @@ import { IndexerModule } from './indexer/indexer.module';
 import { NotificationModule } from './notification/notification.module';
 import { EncryptionModule } from './encryption/encryption.module';
 import { StorageModule } from './storage/storage.module';
-import { InsuranceModule } from 'insurance/insurance.module';
+import { InsuranceModule } from './insurance/insurance.module';
 
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { CorrelationIdMiddleware } from './middleware/correlation-id.middleware';

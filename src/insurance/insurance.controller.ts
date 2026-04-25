@@ -5,7 +5,7 @@ import { ClaimService } from './claim.service';
 import { ReinsuranceService } from './reinsurance.service';
 import { PurchasePolicyDto } from './dto/purchase-policy.dto';
 import { CreateReinsuranceDto } from './dto/create-reinsurance.dto';
-import { IdempotencyInterceptor } from '../src/interceptors/idempotency.interceptor';
+import { IdempotencyInterceptor } from '../interceptors/idempotency.interceptor';
 
 @Controller({ path: 'insurance', version: '1' })
 export class InsuranceController {
