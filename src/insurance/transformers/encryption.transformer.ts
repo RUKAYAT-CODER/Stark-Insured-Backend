@@ -1,5 +1,5 @@
 import { ValueTransformer } from 'typeorm';
-import { EncryptionService } from '../../src/encryption/encryption.service';
+import { EncryptionService } from '../../encryption/encryption.service';
 
 /**
  * TypeORM Value Transformer for encrypting/decrypting decimal fields

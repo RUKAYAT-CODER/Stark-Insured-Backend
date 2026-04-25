@@ -9,7 +9,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.InsuranceModule = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
-const prisma_service_1 = require("../src/prisma.service");
+const prisma_service_1 = require("../prisma.service");
 const insurance_policy_entity_1 = require("./entities/insurance-policy.entity");
 const insurance_pool_entity_1 = require("./entities/insurance-pool.entity");
 const claim_entity_1 = require("./entities/claim.entity");
@@ -20,7 +20,7 @@ const pool_service_1 = require("./pool.service");
 const claim_service_1 = require("./claim.service");
 const reinsurance_service_1 = require("./reinsurance.service");
 const pricing_service_1 = require("./pricing.service");
-const idempotency_interceptor_1 = require("../src/interceptors/idempotency.interceptor");
+const idempotency_interceptor_1 = require("../interceptors/idempotency.interceptor");
 let InsuranceModule = class InsuranceModule {
 };
 exports.InsuranceModule = InsuranceModule;

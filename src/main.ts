@@ -15,6 +15,11 @@ async function bootstrap() {
   });
   const configService = app.get(ConfigService);
 
+  // Application bootstrap setup
+  // - create the Nest app with a shared Winston logger
+  // - load config service for runtime configuration values
+  // - apply middleware and global pipes before listening
+
   // Cookie parser for CSRF
   app.use(cookieParser());
 
@@ -43,6 +48,9 @@ async function bootstrap() {
   }));
 
   // Global validation pipe
+  // - removes non-whitelisted properties
+  // - rejects unrecognized payload fields
+  // - keeps runtime types safe by avoiding implicit conversion
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -97,6 +105,8 @@ async function bootstrap() {
   logger.log(`Application is running on: http://localhost:${port}/${apiPrefix}`);
 
   // Graceful shutdown handling
+  // Ensures the server stops accepting new requests, closes the HTTP server,
+  // and allows Nest lifecycle hooks to fire before exiting.
   const shutdownTimeout = configService.get<number>('SHUTDOWN_TIMEOUT', 30000);
   let isShuttingDown = false;
 

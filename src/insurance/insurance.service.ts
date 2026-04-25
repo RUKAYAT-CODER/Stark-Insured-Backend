@@ -5,7 +5,7 @@ import { InsurancePolicy } from './entities/insurance-policy.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { RiskType } from './enums/risk-type.enum';
-import { EncryptionService } from '../src/encryption/encryption.service';
+import { EncryptionService } from '../encryption/encryption.service';
 import { AuditService } from './services/audit.service';
 
 @Injectable()

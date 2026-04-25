@@ -20,7 +20,7 @@ const claim_service_1 = require("./claim.service");
 const reinsurance_service_1 = require("./reinsurance.service");
 const purchase_policy_dto_1 = require("./dto/purchase-policy.dto");
 const create_reinsurance_dto_1 = require("./dto/create-reinsurance.dto");
-const idempotency_interceptor_1 = require("../src/interceptors/idempotency.interceptor");
+const idempotency_interceptor_1 = require("../interceptors/idempotency.interceptor");
 let InsuranceController = class InsuranceController {
     constructor(insurance, claims, reinsurance) {
         this.insurance = insurance;
