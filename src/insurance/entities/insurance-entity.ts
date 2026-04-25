@@ -1,3 +1,6 @@
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { PolicyStatus } from '../enums/policy-status.enum';
+
 @Entity('insurance_policies')
 export class InsurancePolicy {
   @PrimaryGeneratedColumn('uuid')
@@ -6,10 +9,10 @@ export class InsurancePolicy {
   @Column()
   holderId: string;
 
-  @Column()
+  @Column('decimal')
   coverageAmount: number;
 
-  @Column()
+  @Column('decimal')
   premium: number;
 
   @Column()
@@ -17,4 +20,17 @@ export class InsurancePolicy {
 
   @Column()
   endDate: Date;
+
+  @Column({
+    type: 'enum',
+    enum: PolicyStatus,
+    default: PolicyStatus.ACTIVE
+  })
+  status: PolicyStatus;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }
