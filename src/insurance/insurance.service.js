@@ -19,7 +19,7 @@ const pool_service_1 = require("./pool.service");
 const insurance_policy_entity_1 = require("./entities/insurance-policy.entity");
 const typeorm_1 = require("typeorm");
 const typeorm_2 = require("@nestjs/typeorm");
-const encryption_service_1 = require("../src/encryption/encryption.service");
+const encryption_service_1 = require("../encryption/encryption.service");
 let InsuranceService = class InsuranceService {
     constructor(pricing, pools, repo, encryption) {
         this.pricing = pricing;

@@ -18,7 +18,7 @@ const claim_entity_1 = require("./entities/claim.entity");
 const typeorm_1 = require("typeorm");
 const typeorm_2 = require("@nestjs/typeorm");
 const claim_status_enum_1 = require("./enums/claim-status.enum");
-const encryption_service_1 = require("../src/encryption/encryption.service");
+const encryption_service_1 = require("../encryption/encryption.service");
 let ClaimService = class ClaimService {
     constructor(repo, encryption) {
         this.repo = repo;

@@ -6,8 +6,8 @@ const dotenv_1 = require("dotenv");
 exports.default = new typeorm_1.DataSource({
     type: 'postgres',
     url: process.env.DATABASE_URL,
-    entities: ['insurance/entities/*.entity.ts'],
-    migrations: ['insurance/migrations/*.ts'],
+    entities: ['src/insurance/entities/*.entity.ts'],
+    migrations: ['src/insurance/migrations/*.ts'],
     synchronize: false,
     logging: ['error', 'warn', 'migration'],
 });
